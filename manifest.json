@@ -1,0 +1,27 @@
+{
+  "manifest_version": 2,
+
+  "name": "Download Helper",
+  "description": "Provides various tools to assist with downloading sites and media",
+  "version": "1.0",
+  "content_scripts": [
+    {
+      "run_at": "document_end",
+      "matches": ["http://*/*",
+        "https://*/*"
+      ],
+      "js": ["content.js"]
+    }
+  ],
+  "browser_action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "storage",
+    "http://*/*",
+    "https://*/*"
+  ]
+}
