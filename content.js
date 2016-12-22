@@ -61,32 +61,21 @@ function getPageMedia() {
         console.log("Artist: " + output.artist);
 
         //http://68.media.tumblr.com/a3bc1e014074b7b333469b91adc04022/tumblr_oi6yomYX0X1rn062io1_500.jpg
-        var tumblrMediaRegExp = new RegExp("https?://\\d+\\.media\\.tumblr\\.com/.*", 'i');
+        output.links = getTumblrImages(document);
 
-        var elements = document.querySelectorAll("img");
-        if (elements == null || elements.length == 0) {
-            output.error = "No media found";
-        }
-        for (i = 0; i < elements.length; i++) {
-            var ele = elements[i];
-            if (ele == null) {
-                output.error = "No media found";
-            } else {
-                var link = ele.src;
-                if (!tumblrMediaRegExp.test(link) || link.indexOf("avatar_") > -1) {
-                    continue;
-                }
 
-                if (link.indexOf("_500.") > -1) {
-                    link = link.replace("_500", "_1280");
-                }
-                if (link.indexOf("_540.") > -1) {
-                    link = link.replace("_540", "_1280");
-                }
-                console.log("Found URL: " + link);
+        var iframe = document.querySelector("iframe.photoset");
+        if (iframe != null) {
+            console.log("Found photoset iframe");
+            var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+            var iframeLinks = getTumblrImages(iframeDocument);
+
+            iframeLinks.forEach(function(link) {
                 output.links.push(link);
-            }
+            });
         }
+
     } else if (instagramRegExp.test(url)) {
         var ele = document.querySelector("div._f95g7 a._4zhc5");
         output.artist = ele.innerText;
@@ -135,6 +124,8 @@ function getPageMedia() {
     if(output.artist!=null) {
         output.artist = output.artist.toLowerCase();
     }
+
+    console.log("Total media items found: " + output.links.length);
     return output;
 }
 
@@ -146,3 +137,37 @@ chrome.runtime.onMessage.addListener(
         if (request.greeting == "getPageMedia")
             sendResponse(getPageMedia());
     });
+
+
+function getTumblrImages(documentRoot) {
+    var tumblrMediaRegExp = new RegExp("https?://\\d+\\.media\\.tumblr\\.com/.*", 'i');
+    var output = [];
+    var elements = documentRoot.querySelectorAll("img");
+    if (elements != null && elements.length > 0) {
+        console.log("Found " + elements.length + " img tags");
+        for (i = 0; i < elements.length; i++) {
+            var ele = elements[i];
+            if (ele == null) {
+                console.log("Null element in img list");
+                continue;
+            } else {
+                var link = ele.src;
+                if (!tumblrMediaRegExp.test(link) || link.indexOf("avatar_") > -1) {
+                    continue;
+                }
+
+                if (link.indexOf("_500.") > -1) {
+                    link = link.replace("_500", "_1280");
+                }
+                if (link.indexOf("_540.") > -1) {
+                    link = link.replace("_540", "_1280");
+                }
+                console.log("Found URL: " + link);
+                output.push(link);
+            }
+        }
+    } else {
+        console.log("No img tags found");
+    }
+    return output;
+}

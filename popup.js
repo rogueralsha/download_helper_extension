@@ -2,6 +2,20 @@ var pageMedia = null;
 
 var checkboxes = [];
 
+function linkWrap(element, link) {
+    var output = document.createElement("a");
+    output.href = link;
+    output.target = "_new";
+    output.appendChild(element);
+    return output;
+}
+
+function tdWrap(element) {
+    var output = document.createElement("td");
+    output.appendChild(element);
+    return output;
+}
+
 function getDetectedMedia() {
     checkboxes = [];
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -25,23 +39,28 @@ function getDetectedMedia() {
                 setMessage("No media found");
             } else {
                 getOutputElement().innerHTML = "";
+                var table = document.createElement("table");
                 for (var i = 0, len = response.links.length; i < len; i++) {
                     var link = decodeURI( response.links[i]);
-                    var item = document.createElement("div");
+                    var row = document.createElement("tr");
+                    var text = document.createElement("span");
+                    text.innerText = getFileName(link);
+                    row.appendChild(tdWrap(linkWrap(text, link)));
+
                     var img = document.createElement("img");
-                    var span = document.createElement("span");
+                    img.src = link;
+                    row.appendChild(tdWrap(img));
+
                     var check = document.createElement("input");
                     check.type = "checkbox";
                     check.value = i;
                     check.checked = true;
-                    img.src = link;
-                    span.innerText = getFileName(link);
-                    item.appendChild(span);
-                    item.appendChild(img);
-                    item.appendChild(check);
-                    getOutputElement().appendChild(item);
+                    row.appendChild(tdWrap(check));
+
+                    table.appendChild(row);
                     checkboxes.push(check);
                 }
+                getOutputElement().appendChild(table);
                 btnEle.style.display = "block";
                 txtEle.style.display = "block";
                 artistEle.style.display = "block";
@@ -55,9 +74,11 @@ function getDetectedMedia() {
                     if(values[storagePath]==undefined) {
                         txtEle.value = "";
                         console.log("No path found for artist " + response.artist);
+                        txtEle.focus();
                     } else {
                         console.log("Path found for artist " + response.artist + ": " + values[storagePath]);
                         txtEle.value = values[storagePath];
+                        txtEle.focus();
                     }
                 });
             }
@@ -115,11 +136,10 @@ function downloadMedia() {
             url: link,
             filename:  fileName, // Optional
             conflictAction: "uniquify"
-
         });
     }
 
-
+    //window.close();
 }
 
 document.getElementById('download-button').onclick = downloadMedia;

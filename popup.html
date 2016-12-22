@@ -17,7 +17,7 @@
         width:50px;
         vertical-align: middle;
       }
-        div#output div {
+        div#output span {
             white-space: nowrap;
         }
     </style>
@@ -31,9 +31,11 @@
   </head>
   <body>
   <div style="text-align:right;">
-  <input type="text" id="download-path-input" style="display: none;width:100%;" value ="" />
-  <input type="button" id="download-button" style="display:none;" value="Download" />
       <div id="artist-name-div">Artist:<span id="artist-name-span"></span></div>
+      <div style="float:right">
+      <input type="button" id="download-button" style="display:none;" value="Download" />
+      </div>
+    <input type="text" id="download-path-input" style="display: none;width:100%;" value ="" />
   </div>
     <div id="output">Loading...</div>
   <script src="popup.js"></script>
