@@ -26,10 +26,12 @@ function getDetectedMedia() {
             }
 
             var btnEle = document.getElementById("download-button");
+            var openBtnEle = document.getElementById("open-button");
             var txtEle = document.getElementById("download-path-input");
             var artistEle = document.getElementById("artist-name-div");
 
             btnEle.style.display = "none";
+            openBtnEle.display = "none";
             txtEle.style.display = "none";
             artistEle.style.display = "none";
 
@@ -41,15 +43,19 @@ function getDetectedMedia() {
                 getOutputElement().innerHTML = "";
                 var table = document.createElement("table");
                 for (var i = 0, len = response.links.length; i < len; i++) {
-                    var link = decodeURI( response.links[i]);
+                    var link = response.links[i];
                     var row = document.createElement("tr");
                     var text = document.createElement("span");
-                    text.innerText = getFileName(link);
-                    row.appendChild(tdWrap(linkWrap(text, link)));
+                    text.innerText = link["filename"];
+                    row.appendChild(tdWrap(linkWrap(text, link["url"])));
 
-                    var img = document.createElement("img");
-                    img.src = link;
-                    row.appendChild(tdWrap(img));
+                    if(link["type"]=="image") {
+                        var img = document.createElement("img");
+                        img.src = link["url"];
+                        row.appendChild(tdWrap(img));
+                    } else {
+                        row.appendChild(document.createElement("td"));
+                    }
 
                     var check = document.createElement("input");
                     check.type = "checkbox";
@@ -61,9 +67,10 @@ function getDetectedMedia() {
                     checkboxes.push(check);
                 }
                 getOutputElement().appendChild(table);
-                btnEle.style.display = "block";
-                txtEle.style.display = "block";
-                artistEle.style.display = "block";
+                btnEle.style.display = "inline-block";
+                txtEle.style.display = "inline-block";
+                artistEle.style.display = "inline-block";
+                openBtnEle.style.display = "inline-block";
 
                 document.getElementById("artist-name-span").innerText = response.artist;
 
@@ -99,8 +106,21 @@ function setMessage(message) {
     getOutputElement().innerHTML = message;
 }
 
-function getFileName(link) {
-    return decodeURI(link.substring(link.lastIndexOf('/') + 1).split("?")[0])
+
+
+function openMedia() {
+    if(pageMedia==null||pageMedia.error!=null)
+        return;
+
+    for (var i = 0, len = checkboxes.length; i < len; i++) {
+        var check = checkboxes[i];
+        if(!check.checked) {
+            continue;
+        }
+        var link = pageMedia.links[check.value];
+
+        openNewBackgroundTab(link["url"]);
+    }
 }
 
 function downloadMedia() {
@@ -114,10 +134,9 @@ function downloadMedia() {
     }
     var storagePath = getArtistPath(pageMedia.artist);
     console.log("Saving path for artist " + storagePath + ": " + downloadPath);
+
     var obj= {};
     obj[storagePath] = downloadPath;
-
-
     chrome.storage.sync.set(obj, function() {
         // Notify that we saved.
         console.log("Saved new path for artist");
@@ -129,20 +148,33 @@ function downloadMedia() {
             continue;
         }
         var link = pageMedia.links[check.value];
-        var fileName = "import" + "/" + downloadPath + "/" + getFileName(link);
-        console.log("Downloading with path: " + fileName)
 
-        chrome.downloads.download({
-            url: link,
-            filename:  fileName, // Optional
-            conflictAction: "uniquify"
-        });
+            var fileName = "temp" + "/" + downloadPath + "/" + link["filename"];
+            console.log("Downloading with path: " + fileName)
+
+            chrome.downloads.download({
+                url: link["url"],
+                filename: fileName, // Optional
+                conflictAction: "uniquify"
+            });
     }
 
     //window.close();
 }
 
+function openNewBackgroundTab(link){
+    var a = document.createElement("a");
+    a.href = link;
+    var evt = document.createEvent("MouseEvents");
+    //the tenth parameter of initMouseEvent sets ctrl key
+    evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0,
+        true, false, false, false, 0, null);
+    a.dispatchEvent(evt);
+}
+
 document.getElementById('download-button').onclick = downloadMedia;
+document.getElementById('open-button').onclick = openMedia;
+document.getElementById('refresh-button').onclick = getDetectedMedia;
 document.addEventListener('DOMContentLoaded', function() {
     getDetectedMedia();
 });

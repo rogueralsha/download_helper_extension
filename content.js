@@ -2,12 +2,15 @@ function getPageMedia() {
     var url = window.location.href;
     var output = {};
     output.links = [];
+    output.action = "download";
 
     var deviantArtRegExp = new RegExp("https?://([^\\.]+)\\.deviantart\\.com/art/.*", 'i');
     var artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 'i');
     var tumblrRegExp = new RegExp("https?://([^\\.]+)\\.tumblr\\.com/post/.*", 'i');
     var instagramRegExp = new RegExp("https?://([^\\.]+)\\.instagram\\.com/p/.*", 'i');
     var hfRegExp = new RegExp("https?://www\\.hentai-foundry\\.com/pictures/user/([^/]+)/.*", 'i');
+    var patreonPostsRegExp = new RegExp("https?://www\\.patreon\\.com/[^/]+/posts", 'i');
+    var patreonPostRegExp = new RegExp("https?://www\\.patreon\\.com/posts/.*", 'i');
 
 
     if (deviantArtRegExp.test(url)) {
@@ -24,14 +27,12 @@ function getPageMedia() {
             if (ele == null) {
                 output.error = "No media found";
             } else {
-                var link = ele.src;
-                console.log("Found URL: " + link);
-                output.links.push(link);
+                console.log("Found URL: " + ele.src);
+                output.links.push(createLink(ele.src,"image"));
             }
         } else {
-            var link = ele.href;
-            console.log("Found URL: " + link);
-            output.links.push(link);
+            console.log("Found URL: " + ele.href);
+            output.links.push(createLink(ele.href,"image"));
         }
     } else if (artStationRegExp.test(url)) {
         var ele = document.querySelector("div.artist-name-and-headline div.name a");
@@ -50,7 +51,7 @@ function getPageMedia() {
                 var link = ele.href;
                 if (link.indexOf("&dl=1") > -1) {
                     console.log("Found URL: " + link);
-                    output.links.push(link);
+                    output.links.push(createLink(link,"image"));
                 }
             }
         }
@@ -92,22 +93,88 @@ function getPageMedia() {
             } else {
                 var link = ele.src;
                 console.log("Found URL: " + link);
-                output.links.push(link);
+                output.links.push(createLink(link,"image"));
             }
         }
     } else if (hfRegExp.test(url)) {
-            console.log("Hentai Foundry page detected");
-            var matches = hfRegExp.exec(url);
-            output.artist = matches[1];
-            console.log("Artist: " + output.artist);
+        console.log("Hentai Foundry page detected");
+        var matches = hfRegExp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
 
-            var ele = document.querySelector("div.container div.boxbody img");
-            var download_url;
-            if (ele != null) {
-                var link = ele.src;
+        var ele = document.querySelector("div.container div.boxbody img");
+        if (ele != null) {
+            var link = ele.src;
+            if(link.indexOf("vote_happy.png")==-1) {
                 console.log("Found URL: " + link);
-                output.links.push(link);
+                output.links.push(createLink(link, "image"));
             }
+        }
+
+        ele = document.querySelector("div.container div.boxbody embed");
+        if (ele != null) {
+            var link = ele.src;
+            console.log("Found URL: " + link);
+            output.links.push(createLink(link,"flash"));
+        }
+    } else if (patreonPostRegExp.test(url)) {
+        console.log("Patreon post detected");
+
+        var ele = document.querySelector(".patreon-patreon-creation-shim--creator--top--text a");
+        var pieces = ele.href.split("/");
+        output.artist = pieces[pieces.length-1];
+        console.log("Artist: " + output.artist);
+
+        ele = document.querySelector("img.patreon-creation-shim--post-file--image");
+        var download_url;
+        if (ele != null) {
+            var link = ele.src;
+            console.log("Found URL: " + link);
+            output.links.push(createLink(link, "image"));
+        }
+
+
+        var elements = document.querySelectorAll(".patreon-creation-shim--attachments--item a")
+        for (i = 0; i < elements.length; i++) {
+            ele = elements[i];
+            if (ele == null) {
+                continue;
+            } else {
+                var link = ele.href;
+                console.log("Found URL: " + link);
+                output.links.push(createLink(link,"image",ele.innerText));
+            }
+        }
+
+    } else if (patreonPostsRegExp.test(url)) {
+        output.action = "open";
+
+        console.log("Patreon artist posts detected");
+
+
+
+        var ele = document.querySelector(".patreon-patreon-creation-shim--creator--top--text a");
+        if(ele!=null) {
+            var pieces = ele.href.split("/");
+            output.artist = pieces[pieces.length - 1];
+            console.log("Artist: " + output.artist);
+        }
+
+        var elements = document.querySelectorAll("a")
+        for (i = 0; i < elements.length; i++) {
+            ele = elements[i];
+            if (ele == null) {
+                continue;
+            } else {
+                var link = ele.href;
+                if (!patreonPostRegExp.test(link)) {
+                    continue;
+                }
+                console.log("Found URL: " + link);
+                output.links.push(createLink(link,"page"));
+            }
+        }
+
     } else {
         // Check if we're on a shimmie site
         var ele = document.querySelector("img.shm-main-image");
@@ -115,7 +182,7 @@ function getPageMedia() {
             var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
             output.artist = siteRegexp.exec(url)[1];
             console.log("Found URL: " + ele.src);
-            output.links.push(ele.src);
+            output.links.push(createLink(ele.src,"image"));
         } else {
             output.error = "Site not recognized";
         }
@@ -125,7 +192,25 @@ function getPageMedia() {
         output.artist = output.artist.toLowerCase();
     }
 
+
     console.log("Total media items found: " + output.links.length);
+    return output;
+}
+
+function getFileName(link) {
+    return decodeURI(link.substring(link.lastIndexOf('/') + 1).split("?")[0])
+}
+
+function createLink(url, type, filename) {
+    var output = {};
+    output["url"] = decodeURI(url);
+    output["type"] = type;
+    console.log("Provided filename: " + filename);
+    if(filename===undefined) {
+        output["filename"] = getFileName(url);
+    } else {
+        output["filename"] = filename;
+    }
     return output;
 }
 
@@ -162,8 +247,14 @@ function getTumblrImages(documentRoot) {
                 if (link.indexOf("_540.") > -1) {
                     link = link.replace("_540", "_1280");
                 }
+                if (link.indexOf("_250.") > -1) {
+                    link = link.replace("_250", "_1280");
+                }
+                if (link.indexOf("_400.") > -1) {
+                    link = link.replace("_400", "_1280");
+                }
                 console.log("Found URL: " + link);
-                output.push(link);
+                output.push(createLink(link,"image"));
             }
         }
     } else {

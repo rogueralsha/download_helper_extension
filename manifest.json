@@ -4,6 +4,7 @@
   "name": "Download Helper",
   "description": "Provides various tools to assist with downloading sites and media",
   "version": "1.0",
+  "options_page": "options.html",
   "content_scripts": [
     {
       "run_at": "document_end",
