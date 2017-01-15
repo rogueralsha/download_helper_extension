@@ -49,19 +49,39 @@ function getDetectedMedia() {
                     text.innerText = link["filename"];
                     row.appendChild(tdWrap(linkWrap(text, link["url"])));
 
+                    var check = document.createElement("input");
+                    check.type = "checkbox";
+                    check.value = i;
+                    check.checked = true;
+
                     if(link["type"]=="image") {
                         var img = document.createElement("img");
+                        img.dataset["index"] = i;
                         img.src = link["url"];
+                        img.onclick = function() {
+                            var index = this.dataset["index"];
+                            checkboxes[index].checked = !checkboxes[index].checked;
+                        }
+
                         row.appendChild(tdWrap(img));
                     } else {
                         row.appendChild(document.createElement("td"));
                     }
 
-                    var check = document.createElement("input");
-                    check.type = "checkbox";
-                    check.value = i;
-                    check.checked = true;
-                    row.appendChild(tdWrap(check));
+                    var span = document.createElement("span");
+                    span.innerText = "X";
+                    span.dataset["index"] = i;
+                    span.onclick = function () {
+                        var index = this.dataset["index"];
+                        checkboxes[index].checked = !checkboxes[index].checked;
+                       for(var j = 0; j <= checkboxes.length;j++) {
+                           checkboxes[j].checked = (index==j);
+                       }
+                    }
+
+                    var cell = tdWrap(check);
+                    cell.appendChild(span);
+                    row.appendChild(cell);
 
                     table.appendChild(row);
                     checkboxes.push(check);
@@ -74,19 +94,9 @@ function getDetectedMedia() {
 
                 document.getElementById("artist-name-span").innerText = response.artist;
 
-                var storagePath = getArtistPath(response.artist);
-                console.log(storagePath);
-                chrome.storage.sync.get([storagePath], function(values) {
-                    console.log(values);
-                    if(values[storagePath]==undefined) {
-                        txtEle.value = "";
-                        console.log("No path found for artist " + response.artist);
-                        txtEle.focus();
-                    } else {
-                        console.log("Path found for artist " + response.artist + ": " + values[storagePath]);
-                        txtEle.value = values[storagePath];
-                        txtEle.focus();
-                    }
+                getMapping(response.artist, function(value) {
+                    txtEle.value = value;
+                    txtEle.focus();
                 });
             }
             pageMedia = response;
@@ -94,9 +104,6 @@ function getDetectedMedia() {
     });
 }
 
-function getArtistPath(artist) {
-    return "artist_path_" + artist;
-}
 
 function getOutputElement() {
     return document.getElementById("output");
@@ -132,15 +139,8 @@ function downloadMedia() {
     if(downloadPath==null) {
         return;
     }
-    var storagePath = getArtistPath(pageMedia.artist);
-    console.log("Saving path for artist " + storagePath + ": " + downloadPath);
 
-    var obj= {};
-    obj[storagePath] = downloadPath;
-    chrome.storage.sync.set(obj, function() {
-        // Notify that we saved.
-        console.log("Saved new path for artist");
-    });
+    setMapping(pageMedia.artist, downloadPath, function() {})
 
     for (var i = 0, len = checkboxes.length; i < len; i++) {
         var check = checkboxes[i];
@@ -149,7 +149,7 @@ function downloadMedia() {
         }
         var link = pageMedia.links[check.value];
 
-            var fileName = "temp" + "/" + downloadPath + "/" + link["filename"];
+            var fileName = "import" + "/" + downloadPath + "/" + link["filename"];
             console.log("Downloading with path: " + fileName)
 
             chrome.downloads.download({
@@ -172,6 +172,12 @@ function openNewBackgroundTab(link){
     a.dispatchEvent(evt);
 }
 
+function autoPath() {
+    var ele = document.getElementById("download-path-input");
+    ele.value = "artwork/" + pageMedia.artist;
+}
+
+document.getElementById('auto-button').onclick = autoPath;
 document.getElementById('download-button').onclick = downloadMedia;
 document.getElementById('open-button').onclick = openMedia;
 document.getElementById('refresh-button').onclick = getDetectedMedia;

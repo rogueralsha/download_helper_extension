@@ -23,6 +23,7 @@
             white-space: nowrap;
         }
     </style>
+    <script src="settings.js"></script>
     <script src="content.js"></script>
 
     <!--
@@ -34,11 +35,12 @@
 </head>
 <body>
 <div style="text-align:right;">
-    <input type="button" id="refresh-button" value="Refresh"/>
-    <div id="artist-name-div">Artist:<span id="artist-name-span"></span></div>
+    <div id="artist-name-div">Artist: <span id="artist-name-span"></span></div>
     <div style="float:right">
-        <input type="button" id="download-button" style="display:none;" value="Download"/>
+        <input type="button" id="refresh-button" value="Refresh"/>
+        <input type="button" id="auto-button" value="Auto"/>
         <input type="button" id="open-button" style="display:none;" value="Open"/>
+        <input type="button" id="download-button" style="display:none;" value="Download"/>
     </div>
     <input type="text" id="download-path-input" style="display: none;width:100%;" value=""/>
 </div>

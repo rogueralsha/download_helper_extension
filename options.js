@@ -9,9 +9,9 @@ function save_options() {
 
         obj[input.name] = input.value;
     }
-    chrome.storage.sync.set(obj, function () {
+
+    saveMappings(obj, function () {
         // Notify that we saved.
-        console.log("Saved new path for artists");
         var status = document.getElementById('status');
         status.textContent = 'Options saved.';
         restore_options();
@@ -20,16 +20,51 @@ function save_options() {
 
 function delete_option() {
     var key = this.name;
-    chrome.storage.sync.remove(key,function() {
+    removeMapping(key,function() {
         restore_options();
     })
+}
+
+function exportSettings() {
+    getMappings(function(mappings) {
+        var output = JSON.stringify(mappings);
+        var link = document.createElement('a');
+        link.download = 'data.json';
+        var blob = new Blob([output], {type: 'text/plain'});
+        link.href = window.URL.createObjectURL(blob);
+        link.click();
+    });
+}
+
+function importSettings() {
+    if (window.FileReader) {
+        var reader = new FileReader ();
+        reader.onloadend = function (ev) {
+            var contents = this.result;
+            var data = JSON.parse(contents);
+            saveMappings(data, function() {
+                restore_options();
+            });
+        };
+        reader.readAsText (document.getElementById("import-file").files[0]);
+    } else {
+        window.alert("No filereader, can't import");
+    }
+}
+
+function deleteSettings() {
+    if(window.confirm("Are you sure you want to wipe out ALL settings?")) {
+        chrome.storage.local.clear(function (items) {
+            restore_options();
+        });
+    }
 }
 
 // Restores select box and checkbox state using the preferences
 // stored in chrome.storage.
 function restore_options() {
     // Use default value color = 'red' and likesColor = true.
-    chrome.storage.sync.get(null, function (items) {
+    getMappings(function (items) {
         var space = document.getElementById("mappings");
         input = [];
         delete_checks = [];
@@ -82,3 +117,9 @@ function restore_options() {
 document.addEventListener('DOMContentLoaded', restore_options);
 document.getElementById('save').addEventListener('click',
     save_options);
+document.getElementById('export-button').addEventListener('click',
+    exportSettings);
+document.getElementById('reset-button').addEventListener('click',
+    deleteSettings);
+document.getElementById('import-button').addEventListener('click',
+    importSettings);

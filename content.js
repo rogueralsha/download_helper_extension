@@ -12,6 +12,9 @@ function getPageMedia() {
     var patreonPostsRegExp = new RegExp("https?://www\\.patreon\\.com/[^/]+/posts", 'i');
     var patreonPostRegExp = new RegExp("https?://www\\.patreon\\.com/posts/.*", 'i');
 
+    var twitterRegExp = new RegExp("https?://twitter\\.com/([^/]+)/?", 'i');
+    var twitterPostRegExp = new RegExp("https?://twitter\\.com/([^/]+)/status/.+", 'i');
+
 
     if (deviantArtRegExp.test(url)) {
         console.log("Deviantart page detected");
@@ -174,7 +177,35 @@ function getPageMedia() {
                 output.links.push(createLink(link,"page"));
             }
         }
+    } else if (twitterRegExp.test(url)) {
+        console.log("Twitter page detected");
+        var matches = twitterRegExp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
 
+        if (twitterPostRegExp.test(url)) {
+            // This means we're viewing an individual post
+            var elements = document.querySelectorAll(".permalink-container .js-adaptive-photo img");
+            for (i = 0; i < elements.length; i++) {
+                var ele = elements[i];
+                var link = ele.src;
+                console.log("Found URL: " + link);
+                output.links.push(createLink(link + ":large","image", getFileName(link)));
+            }
+        } else {
+            // This means it's a user's page
+            var tweets = document.querySelectorAll("div.tweet");
+            for (i = 0; i < tweets.length; i++) {
+                var ele = tweets[i];
+                var id = ele.dataset["tweetId"];
+                if(id===undefined) {
+                    continue;
+                }
+                var link = "https://twitter.com/" + output.artist + "/status/" + id;
+                console.log("Found URL: " + link);
+                output.links.push(createLink(link,"page", id));
+            }
+        }
     } else {
         // Check if we're on a shimmie site
         var ele = document.querySelector("img.shm-main-image");
