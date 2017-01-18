@@ -4,6 +4,8 @@ var delete_checks = [];
 // Saves options to chrome.storage
 function save_options() {
     var obj = {};
+
+
     for (i = 0; i < inputs.length; i++) {
         var input = inputs[i];
 
@@ -13,8 +15,11 @@ function save_options() {
     saveMappings(obj, function () {
         // Notify that we saved.
         var status = document.getElementById('status');
-        status.textContent = 'Options saved.';
-        restore_options();
+
+        setPrefixPath(document.getElementById("prefix-path").value, function() {
+            status.textContent = 'Options saved.';
+            restore_options();
+        });
     });
 }
 
@@ -64,6 +69,10 @@ function deleteSettings() {
 // stored in chrome.storage.
 function restore_options() {
     // Use default value color = 'red' and likesColor = true.
+    getPrefixPath(function(path) {
+        document.getElementById("prefix-path").value = path;
+    });
+
     getMappings(function (items) {
         var space = document.getElementById("mappings");
         input = [];

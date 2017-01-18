@@ -26,11 +26,14 @@ function getDetectedMedia() {
             }
 
             var btnEle = document.getElementById("download-button");
+            var downCloseBtnEle = document.getElementById("download-close-button");
+
             var openBtnEle = document.getElementById("open-button");
             var txtEle = document.getElementById("download-path-input");
             var artistEle = document.getElementById("artist-name-div");
 
             btnEle.style.display = "none";
+            downCloseBtnEle.style.display = "none";
             openBtnEle.display = "none";
             txtEle.style.display = "none";
             artistEle.style.display = "none";
@@ -88,11 +91,12 @@ function getDetectedMedia() {
                 }
                 getOutputElement().appendChild(table);
                 btnEle.style.display = "inline-block";
+                downCloseBtnEle.style.display = "inline-block";
                 txtEle.style.display = "inline-block";
                 artistEle.style.display = "inline-block";
                 openBtnEle.style.display = "inline-block";
 
-                document.getElementById("artist-name-span").innerText = response.artist;
+                document.getElementById("artist-name-span").innerText = response.artist + " (" + response.links.length + ")";
 
                 getMapping(response.artist, function(value) {
                     txtEle.value = value;
@@ -130,7 +134,7 @@ function openMedia() {
     }
 }
 
-function downloadMedia() {
+function downloadMedia(pageMedia, callback) {
     if(pageMedia==null||pageMedia.error!=null)
         return;
 
@@ -142,25 +146,81 @@ function downloadMedia() {
 
     setMapping(pageMedia.artist, downloadPath, function() {})
 
-    for (var i = 0, len = checkboxes.length; i < len; i++) {
-        var check = checkboxes[i];
-        if(!check.checked) {
-            continue;
-        }
-        var link = pageMedia.links[check.value];
+    getPrefixPath(function(prefixPath) {
+        downloadPath = prefixPath + "/" + downloadPath;
 
-            var fileName = "import" + "/" + downloadPath + "/" + link["filename"];
+        var toDownload = [];
+
+        for (var i = 0, len = checkboxes.length; i < len; i++) {
+            var check = checkboxes[i];
+            if(!check.checked) {
+                continue;
+            }
+            toDownload.push(pageMedia.links[check.value]);
+        }
+
+        var prog = document.getElementById("multi-download-progress");
+        if(toDownload.length>1) {
+            prog.style.display = "block";
+        }
+        prog.max = toDownload.length;
+        prog.value = 0;
+        downloadHelper(downloadPath, toDownload, function() {
+            if(callback!=null)
+                callback();
+        }, function() {
+            prog.value = prog.value+1;
+        });
+
+    });
+}
+
+function downloadHelper(downloadPath, linkList, callback, progressCallBack) {
+
+    if(linkList.length>0) {
+        var link = linkList[0];
+        linkList.splice(0,1);
+
+        if(link===undefined) {
+            window.alert("undefined");
+        }
+
+        if(link["type"]=="page") {
+            var tab = chrome.tabs.create({url:link["url"],active:false}, function (tab) {
+                chrome.tabs.onUpdated.addListener(function(tabId , info) {
+                    if (tabId==tab.id&&info.status == "complete") {
+                        chrome.tabs.sendMessage(tab.id, {greeting: "getPageMedia"}, function(response) {
+                            if (response == null||response.error!=null) {
+                                return;
+                            }
+                            downloadHelper(downloadPath, response.links, function() {
+                                chrome.tabs.remove(tab.id);
+                                downloadHelper(downloadPath, linkList, callback, progressCallBack);
+                            });
+                        });
+                    }
+                });
+            });
+        } else {
+            var fileName = downloadPath + "/" + link["filename"];
             console.log("Downloading with path: " + fileName)
 
             chrome.downloads.download({
                 url: link["url"],
                 filename: fileName, // Optional
                 conflictAction: "uniquify"
+            }, function() {
+                downloadHelper(downloadPath, linkList, callback, progressCallBack);
             });
+        }
+        if(progressCallBack!=null)
+            progressCallBack();
+    } else {
+        callback();
     }
-
-    //window.close();
 }
+
+
 
 function openNewBackgroundTab(link){
     var a = document.createElement("a");
@@ -178,7 +238,16 @@ function autoPath() {
 }
 
 document.getElementById('auto-button').onclick = autoPath;
-document.getElementById('download-button').onclick = downloadMedia;
+document.getElementById('download-button').onclick = function() { downloadMedia(pageMedia, function() {
+    window.close();
+}); };
+document.getElementById('download-close-button').onclick = function() { downloadMedia(pageMedia, function() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        chrome.tabs.remove(tabs[0].id);
+        //window.close();
+    });
+}); };
+
 document.getElementById('open-button').onclick = openMedia;
 document.getElementById('refresh-button').onclick = getDetectedMedia;
 document.addEventListener('DOMContentLoaded', function() {

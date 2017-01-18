@@ -69,6 +69,26 @@ function getMapping(name, callback) {
     });
 }
 
+var SETTING_PREFIX = "setting.prefix";
+
+function getPrefixPath(callback) {
+    get(SETTING_PREFIX, callback);
+}
+
+function setPrefixPath(path, callback) {
+    set(SETTING_PREFIX, path, callback);
+}
+
+function get(key, callback) {
+    chrome.storage.local.get([key], function(values) {
+        if(values[key]===undefined) {
+            return "";
+        } else {
+            callback(values[key]);
+        }
+    });
+}
+
 function set(key, value, callback) {
     var obj= {};
     obj[key] = value;
