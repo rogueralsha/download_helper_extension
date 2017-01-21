@@ -71,19 +71,33 @@ function getDetectedMedia() {
                         row.appendChild(document.createElement("td"));
                     }
 
-                    var span = document.createElement("span");
-                    span.innerText = "X";
-                    span.dataset["index"] = i;
-                    span.onclick = function () {
+                    var cell = tdWrap(check);
+
+                    var btn = document.createElement("input");
+                    btn.type = "button";
+                    btn.value = "X";
+                    btn.dataset["index"] = i;
+                    btn.onclick = function () {
                         var index = this.dataset["index"];
                         checkboxes[index].checked = !checkboxes[index].checked;
                        for(var j = 0; j <= checkboxes.length;j++) {
                            checkboxes[j].checked = (index==j);
                        }
                     }
+                    cell.appendChild(btn);
 
-                    var cell = tdWrap(check);
-                    cell.appendChild(span);
+                    var btn = document.createElement("input");
+                    btn.type = "button";
+                    btn.value = "^";
+                    btn.dataset["index"] = i;
+                    btn.onclick = function () {
+                        var index = this.dataset["index"];
+                        for(var j = 0; j < index;j++) {
+                            checkboxes[j].checked = false;
+                        }
+                    }
+                    cell.appendChild(btn);
+
                     row.appendChild(cell);
 
                     table.appendChild(row);
