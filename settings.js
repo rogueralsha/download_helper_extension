@@ -82,7 +82,7 @@ function setPrefixPath(path, callback) {
 function get(key, callback) {
     chrome.storage.local.get([key], function(values) {
         if(values[key]===undefined) {
-            return "";
+            callback("");
         } else {
             callback(values[key]);
         }

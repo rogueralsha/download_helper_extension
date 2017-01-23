@@ -19,9 +19,9 @@ function tdWrap(element) {
 function getDetectedMedia() {
     checkboxes = [];
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, {greeting: "getPageMedia"}, function(response) {
+        chrome.tabs.sendMessage(tabs[0].id, {command: "getPageMedia"}, function(response) {
             if(response==null) {
-                setMessage("No media found");
+                setMessage("No media found (null)");
                 return;
             }
 
@@ -161,7 +161,9 @@ function downloadMedia(pageMedia, callback) {
     setMapping(pageMedia.artist, downloadPath, function() {})
 
     getPrefixPath(function(prefixPath) {
+		if(prefixPath.length>0) {
         downloadPath = prefixPath + "/" + downloadPath;
+		}
 
         var toDownload = [];
 
@@ -203,7 +205,7 @@ function downloadHelper(downloadPath, linkList, callback, progressCallBack) {
             var tab = chrome.tabs.create({url:link["url"],active:false}, function (tab) {
                 chrome.tabs.onUpdated.addListener(function(tabId , info) {
                     if (tabId==tab.id&&info.status == "complete") {
-                        chrome.tabs.sendMessage(tab.id, {greeting: "getPageMedia"}, function(response) {
+                        chrome.tabs.sendMessage(tab.id, {command: "getPageMedia"}, function(response) {
                             if (response == null||response.error!=null) {
                                 return;
                             }
@@ -234,8 +236,6 @@ function downloadHelper(downloadPath, linkList, callback, progressCallBack) {
     }
 }
 
-
-
 function openNewBackgroundTab(link){
     var a = document.createElement("a");
     a.href = link;
@@ -248,7 +248,7 @@ function openNewBackgroundTab(link){
 
 function autoPath() {
     var ele = document.getElementById("download-path-input");
-    ele.value = "artwork/" + pageMedia.artist;
+    ele.value = "import/artwork/" + pageMedia.artist;
 }
 
 document.getElementById('auto-button').onclick = autoPath;

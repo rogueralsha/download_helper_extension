@@ -5,13 +5,16 @@
   "description": "Provides various tools to assist with downloading sites and media",
   "version": "1.0",
   "options_page": "options.html",
+  "background": {
+    "scripts": ["settings.js","bg.js"]
+  },
   "content_scripts": [
     {
       "run_at": "document_end",
       "matches": ["http://*/*",
         "https://*/*"
       ],
-      "js": ["content.js"]
+      "js": ["download.js","settings.js","content.js"]
     }
   ],
   "browser_action": {
