@@ -113,6 +113,8 @@ function getPageMedia(callback) {
 
     var async = false;
 
+    var metaAppName = document.querySelector('meta[property="al:android:app_name"]');
+
     if (deviantArtRegExp.test(url)) {
         console.log("Deviantart page detected");
         var matches = deviantArtRegExp.exec(url);
@@ -181,10 +183,18 @@ function getPageMedia(callback) {
                 }
             }
         }
-    } else if (tumblrRegExp.test(url)) {
+    } else if (metaAppName!=null&&metaAppName.content.toLowerCase()=="tumblr") {
         console.log("Tumblr page detected");
-        var matches = tumblrRegExp.exec(url);
-        output.artist = matches[1];
+        var body = document.querySelector("body");
+        if(body!=null&&body.dataset["urlencodedName"]!=null) {
+            output.artist = body.dataset["urlencodedName"];
+        } else {
+            var metaTitle = document.querySelector('meta[property="og:title"]');
+            if(metaTitle!=null) {
+                output.artist = metaTitle.content;
+            }
+        }
+
         console.log("Artist: " + output.artist);
 
         //http://68.media.tumblr.com/a3bc1e014074b7b333469b91adc04022/tumblr_oi6yomYX0X1rn062io1_500.jpg
@@ -202,6 +212,8 @@ function getPageMedia(callback) {
                 output.addLink(link);
             });
         }
+
+
 
     } else if (instagramRegExp.test(url)) {
         var ele = document.querySelector("div._f95g7 a._4zhc5");

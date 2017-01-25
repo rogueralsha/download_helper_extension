@@ -39,7 +39,7 @@ function getDetectedMedia() {
             artistEle.style.display = "none";
 
             if(response.error!=null) {
-                setMessage(data.error);
+                setMessage(response.error);
             }else if(response.links.length==0) {
                 setMessage("No media found");
             } else {
