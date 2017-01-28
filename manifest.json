@@ -6,7 +6,7 @@
   "version": "1.0",
   "options_page": "options.html",
   "background": {
-    "scripts": ["settings.js","bg.js"]
+    "scripts": ["settings.js","download.js","bg.js"]
   },
   "content_scripts": [
     {

@@ -20,6 +20,12 @@ var redditPostRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)/comme
 var imgurAlbumRegexp = new RegExp("https?:\\/\\/imgur\.com\\/a\\/([^\\/]+)", 'i');
 var imgurPostRegexp = new RegExp("https?:\\/\\/imgur\.com\\/([^\\/]+)$", 'i');
 
+var newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folder)\\/(.+)", 'i');
+
+var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
+
+var backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)")
+
 function isSupportedPage(link) {
     if (imgurAlbumRegexp.test(link) ||
         imgurPostRegexp.test(link) ||
@@ -39,7 +45,47 @@ function isSupportedPage(link) {
 var cachedLinks = [];
 var imgEles = [];
 
+function downloadItem(link, callback) {
+    getPageMedia(function(result) {
+        var src = event.srcElement.src;
+        if (result.error == null) {
+            result.links = [];
+            result.addLink(createLink(link, "image"));
+            chrome.runtime.sendMessage({command: "download", results: result}, function (response) {
+                if(callback!=null) {
+                    callback();
+                }
+            });
+
+        }
+    });
+
+}
+
 function downloadHelperPageInit() {
+    var toolbarEle = document.createElement("div");
+    toolbarEle.style.display = "none";
+    toolbarEle.style.position = "absolute";
+    toolbarEle.style.zIndex = "99999999999";
+    var btnEle = document.createElement("input");
+    btnEle.type = "button";
+    btnEle.value = "Download";
+    btnEle.onclick = function(event) {
+        downloadItem(toolbarEle.dataset["link"]);
+    };
+    toolbarEle.appendChild(btnEle);
+    btnEle = document.createElement("input");
+    btnEle.type = "button";
+    btnEle.value = "Download & Close";
+    btnEle.onclick = function(event) {
+        downloadItem(toolbarEle.dataset["link"], function () {
+            chrome.runtime.sendMessage({command: "closeTab"}, function() {});
+        });
+    };
+    toolbarEle.appendChild(btnEle);
+
+    document.body.appendChild(toolbarEle);
+
     console.log("DOM content loaded");
     imgEles = document.getElementsByTagName("img");
     if (imgEles != null) {
@@ -47,15 +93,16 @@ function downloadHelperPageInit() {
             var imgEle = imgEles[i];
             imgEle.dataset["index"] = i;
             imgEle.addEventListener("dragend", function (event) {
-                var result = getPageMedia();
-                var src = event.srcElement.src;
-                if (result.error == null) {
-                    result.links = [];
-                    result.addLink(createLink(imgEle.src, "image"));
-                    chrome.runtime.sendMessage({command: "download", results: result}, function (response) {
-                    });
-
-                }
+                downloadItem(imgEle.src);
+            });
+            imgEle.addEventListener("mouseover", function(event) {
+                var rect = event.srcElement.getBoundingClientRect();
+                var y = rect.top;
+                var x = rect.left;
+                toolbarEle.dataset["link"] = event.srcElement.src;
+                toolbarEle.style.left = x + "px";
+                toolbarEle.style.top = y + "px";
+                toolbarEle.style.display = "block";
             });
         }
     }
@@ -183,17 +230,26 @@ function getPageMedia(callback) {
                 }
             }
         }
-    } else if (metaAppName!=null&&metaAppName.content.toLowerCase()=="tumblr") {
+    } else if (tumblrRegExp.test(url)||(metaAppName!=null&&metaAppName.content.toLowerCase()=="tumblr")||document.querySelector("meta[name='tumblr-theme']")!=null) {
         console.log("Tumblr page detected");
-        var body = document.querySelector("body");
-        if(body!=null&&body.dataset["urlencodedName"]!=null) {
-            output.artist = body.dataset["urlencodedName"];
+        if(tumblrRegExp.test(url)) {
+            output.artist = tumblrRegExp.exec(url)[1];
         } else {
-            var metaTitle = document.querySelector('meta[property="og:title"]');
-            if(metaTitle!=null) {
-                output.artist = metaTitle.content;
-            }
+            output.artist = siteRegexp.exec(url)[1];
         }
+
+        // var body = document.querySelector("body");
+        // if(body!=null&&body.dataset["urlencodedName"]!=null) {
+        //     output.artist = body.dataset["urlencodedName"];
+        // } else {
+        //     var metaTitle = document.querySelector('meta[property="og:title"]');
+        //     if(metaTitle!=null&&metaTitle.content.length>0) {
+        //         output.artist = metaTitle.content;
+        //     } else {
+        //         metaTitle = document.querySelector('meta[name="twitter:title"]');
+        //         output.artist = metaTitle.content;
+        //     }
+        // }
 
         console.log("Artist: " + output.artist);
 
@@ -425,12 +481,130 @@ function getPageMedia(callback) {
                 output.addLink(createLink(link, "image"));
             }
         }
+    } else if(document.querySelector("#cpg_main_block_outer")!=null) {
+        console.log("Coppermine site detected");
+        output.artist = siteRegexp.exec(url)[1];
+
+        var coppermineAlbumRegex = new RegExp(".+\\/index\\.php\\?cat\\=\\d+");
+        var coppermineThumbnailsRegex = new RegExp(".+\\/thumbnails\\.php\\?album\\=\\d+");
+
+        var thumbEles = [];
+        if (coppermineAlbumRegex.test(url)) {
+            thumbEles = document.querySelectorAll("td.thumbnails a.albums");
+        } else if (coppermineThumbnailsRegex.test(url)) {
+            thumbEles = document.querySelectorAll("td.thumbnails a");
+        }
+
+
+        var titleEle = document.querySelector("table.maintable h2");
+        if (titleEle != null) {
+            output["page_title"] = titleEle.innerText;
+        }
+
+        for (var i = 0; i < thumbEles.length; i++) {
+            var thumbEle = thumbEles[i];
+            var imgEle = thumbEle.querySelector("img");
+            var link = thumbEle.href;
+            console.log("Found URL: " + link);
+            if (imgEle.title != null && imgEle.title.length > 0) {
+                output.addLink(createLink(link, "page", imgEle.title, imgEle.src));
+            } else {
+                var tableEle = thumbEle.parentNode;
+                while (tableEle.nodeName.toLowerCase() != "table") {
+                    tableEle = tableEle.parentNode;
+                }
+                var titleEle = tableEle.querySelector("td.tableh2 a");
+                if (titleEle != null) {
+                    output.addLink(createLink(link, "page", titleEle.innerText, imgEle.src));
+                } else {
+                    output.addLink(createLink(link, "page", null, imgEle.src));
+                }
+
+            }
+        }
+
+
+        var itemEle = document.querySelector(".display_media");
+        if (itemEle != null) {
+            var objEle = itemEle.querySelector("object param[name='src']")
+            var imgEle = itemEle.querySelector("img");
+            var downEle = document.querySelector("a.button");
+            if (downEle != null) {
+                var link = downEle.href;
+                console.log("Found URL: " + link);
+                output.addLink(createLink(link, "image"));
+            } else if (objEle != null) {
+                var link = objEle.value;
+                console.log("Found URL: " + link);
+                output.addLink(createLink(link, "video"));
+            } else if (imgEle != null) {
+                var link = imgEle.src;
+                console.log("Found URL: " + link);
+                output.addLink(createLink(link, "image"));
+            } else {
+                console.debug("No media element found!");
+            }
+        } else {
+            var navEles = document.querySelectorAll("td.navmenu a");
+            var coppermineAlbumPageRegex = new RegExp(".+\\/thumbnails\\.php\\?album=\\d+\\&page=(\\d+)");
+            var coppermineCategoryPageRegex = new RegExp(".+\\/index\\.php\\?cat=\\d+\\&page=(\\d+)");
+            var currentPage = 1;
+            if (coppermineAlbumPageRegex.test(url)) {
+                currentPage = parseInt(coppermineAlbumPageRegex.exec(url)[1]);
+            } else if (coppermineCategoryPageRegex.test(url)) {
+                currentPage = parseInt(coppermineCategoryPageRegex.exec(url)[1]);
+            }
+            for (var i = 0; i < navEles.length; i++) {
+                var navEle = navEles[i];
+                var link = navEle.href;
+
+                var navPage = -1;
+                if (coppermineAlbumPageRegex.test(link)) {
+                    navPage = parseInt(coppermineAlbumPageRegex.exec(link)[1]);
+                } else if (coppermineCategoryPageRegex.test(link)) {
+                    navPage = parseInt(coppermineCategoryPageRegex.exec(link)[1]);
+                } else {
+                    continue;
+                }
+
+                if (navPage == currentPage + 1) {
+                    console.log("Found URL: " + link);
+                    output.addLink(createLink(link, "page"));
+                }
+            }
+        }
+    }else if(newsBlurRegExp.test(url)) {
+        console.log("Newsblur page detected");
+
+        var matches = newsBlurRegExp.exec(url);
+        output.artist = matches[2];
+        console.log("Artist: " + output.artist);
+
+        var stories= document.querySelectorAll(".NB-story-titles .NB-story-title-container");
+
+        if (stories != null && stories.length > 0) {
+            for (var j = 0; j < stories.length; j++) {
+                var story = stories[j];
+
+                var link = story.querySelector(".NB-storytitles-content a");
+                if(link==null) {
+                    continue;
+                }
+                link = link.href;
+                var imgEle = story.querySelector(".NB-storytitles-story-image");
+                var thumbnail = "";
+                if(imgEle!=null&&backgroundImageRegexp.test(imgEle.style.backgroundImage)) {
+                    thumbnail = backgroundImageRegexp.exec(imgEle.style.backgroundImage)[1];
+                }
+                console.log("Found URL: " + link);
+                output.addLink(createLink(link, "image", null, thumbnail));
+            }
+        }
 
     } else {
         // Check if we're on a shimmie site
         var ele = document.querySelector("img.shm-main-image");
         if (ele != null) {
-            var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
             output.artist = siteRegexp.exec(url)[1];
             console.log("Found URL: " + ele.src);
             output.addLink(createLink(ele.src, "image"));
@@ -445,20 +619,35 @@ function getPageMedia(callback) {
     return async;
 }
 
+function resolvePartialUrl(url) {
+    var ele = document.createElement("a");
+    ele.href = url;
+    return ele.href;
+}
 
 function getFileName(link) {
     return decodeURI(link.substring(link.lastIndexOf('/') + 1).split("?")[0])
 }
 
-function createLink(url, type, filename) {
+function createLink(url, type, filename, thumbnail) {
     var output = {};
-    output["url"] = decodeURI(url);
+    output["url"] = resolvePartialUrl(decodeURI(url));
     output["type"] = type;
-    console.log("Provided filename: " + filename);
-    if (filename === undefined) {
+
+    if (filename == null) {
         output["filename"] = getFileName(url);
+        if(output["filename"].length==0) {
+            output["filename"] = url;
+        }
     } else {
+        console.log("Provided filename: " + filename);
         output["filename"] = filename;
+    }
+
+    if(thumbnail!=null) {
+        output["thumbnail"] = thumbnail;
+    } else if(type=="image") {
+        output["thumbnail"] = url;
     }
     return output;
 }

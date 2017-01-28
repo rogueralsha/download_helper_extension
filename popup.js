@@ -6,8 +6,18 @@ function linkWrap(element, link) {
     var output = document.createElement("a");
     output.href = link;
     output.target = "_new";
+    output.onclick = openLink;
     output.appendChild(element);
     return output;
+}
+
+function openLink(event) {
+    event.preventDefault();
+    var ele = event.srcElement;
+    while(ele.nodeName.toLowerCase()!="a") {
+        ele = ele.parentNode;
+    }
+    openNewBackgroundTab(ele.href,null);
 }
 
 function tdWrap(element) {
@@ -57,10 +67,10 @@ function getDetectedMedia() {
                     check.value = i;
                     check.checked = true;
 
-                    if(link["type"]=="image") {
+                    if(link["thumbnail"]!=undefined) {
                         var img = document.createElement("img");
                         img.dataset["index"] = i;
-                        img.src = link["url"];
+                        img.src = link["thumbnail"];
                         img.onclick = function() {
                             var index = this.dataset["index"];
                             checkboxes[index].checked = !checkboxes[index].checked;
@@ -110,7 +120,11 @@ function getDetectedMedia() {
                 artistEle.style.display = "inline-block";
                 openBtnEle.style.display = "inline-block";
 
-                document.getElementById("artist-name-span").innerText = response.artist + " (" + response.links.length + ")";
+                if(response.page_title!=null) {
+                    document.getElementById("artist-name-span").innerText = response.page_title + " (" + response.artist + ") (" + response.links.length + ")";
+                } else {
+                    document.getElementById("artist-name-span").innerText = response.artist + " (" + response.links.length + ")";
+                }
 
                 getMapping(response.artist, function(value) {
                     txtEle.value = value;
@@ -122,7 +136,6 @@ function getDetectedMedia() {
     });
 }
 
-
 function getOutputElement() {
     return document.getElementById("output");
 }
@@ -130,8 +143,6 @@ function getOutputElement() {
 function setMessage(message) {
     getOutputElement().innerHTML = message;
 }
-
-
 
 function openMedia() {
     if(pageMedia==null||pageMedia.error!=null)
@@ -160,91 +171,58 @@ function downloadMedia(pageMedia, callback) {
 
     setMapping(pageMedia.artist, downloadPath, function() {})
 
-    getPrefixPath(function(prefixPath) {
-		if(prefixPath.length>0) {
-        downloadPath = prefixPath + "/" + downloadPath;
-		}
+    var toDownload = [];
 
-        var toDownload = [];
-
-        for (var i = 0, len = checkboxes.length; i < len; i++) {
-            var check = checkboxes[i];
-            if(!check.checked) {
-                continue;
-            }
-            toDownload.push(pageMedia.links[check.value]);
+    for (var i = 0, len = checkboxes.length; i < len; i++) {
+        var check = checkboxes[i];
+        if(!check.checked) {
+            continue;
         }
-
-        var prog = document.getElementById("multi-download-progress");
-        if(toDownload.length>1) {
-            prog.style.display = "block";
-        }
-        prog.max = toDownload.length;
-        prog.value = 0;
-        downloadHelper(downloadPath, toDownload, function() {
-            if(callback!=null)
-                callback();
-        }, function() {
-            prog.value = prog.value+1;
-        });
-
-    });
-}
-
-function downloadHelper(downloadPath, linkList, callback, progressCallBack) {
-
-    if(linkList.length>0) {
-        var link = linkList[0];
-        linkList.splice(0,1);
-
-        if(link===undefined) {
-            window.alert("undefined");
-        }
-
-        if(link["type"]=="page") {
-            var tab = chrome.tabs.create({url:link["url"],active:false}, function (tab) {
-                chrome.tabs.onUpdated.addListener(function(tabId , info) {
-                    if (tabId==tab.id&&info.status == "complete") {
-                        chrome.tabs.sendMessage(tab.id, {command: "getPageMedia"}, function(response) {
-                            if (response == null||response.error!=null) {
-                                return;
-                            }
-                            downloadHelper(downloadPath, response.links, function() {
-                                chrome.tabs.remove(tab.id);
-                                downloadHelper(downloadPath, linkList, callback, progressCallBack);
-                            });
-                        });
-                    }
-                });
-            });
-        } else {
-            var fileName = downloadPath + "/" + link["filename"];
-            console.log("Downloading with path: " + fileName)
-
-            chrome.downloads.download({
-                url: link["url"],
-                filename: fileName, // Optional
-                conflictAction: "uniquify"
-            }, function() {
-                downloadHelper(downloadPath, linkList, callback, progressCallBack);
-            });
-        }
-        if(progressCallBack!=null)
-            progressCallBack();
-    } else {
-        callback();
+        toDownload.push(pageMedia.links[check.value]);
     }
+
+    if(toDownload.length==0) {
+        return;
+    }
+
+    pageMedia.links = toDownload;
+
+    var progDiv = document.getElementById("progress-div");
+    progDiv.innerHTML = "";
+
+    function ProgressStatus() {
+        this.max = 0;
+        this.value = 0;
+        this.child = null;
+        this.parent = null;
+        this.bar = document.createElement("progress");
+        this.bar.max = 1;
+        this.bar.value = 0;
+        progDiv.appendChild(this.bar);
+        this.createChild = function() {
+            this.child = new ProgressStatus();
+            this.child.parent = this;
+            return this.child;
+        }
+        this.sendUpdate = function() {
+            this.value++;
+            this.bar.max = this.max;
+            this.bar.value = this.value;
+        }
+        this.complete = function() {
+            progDiv.removeChild(this.bar);
+        }
+    }
+
+    var progressStatus = new ProgressStatus();
+
+    downloadPageMedia(pageMedia, function() {
+        if(callback!=null) {
+            callback();
+        }
+    }, progressStatus);
 }
 
-function openNewBackgroundTab(link){
-    var a = document.createElement("a");
-    a.href = link;
-    var evt = document.createEvent("MouseEvents");
-    //the tenth parameter of initMouseEvent sets ctrl key
-    evt.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0,
-        true, false, false, false, 0, null);
-    a.dispatchEvent(evt);
-}
 
 function autoPath() {
     var ele = document.getElementById("download-path-input");
