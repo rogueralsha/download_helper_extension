@@ -79,6 +79,16 @@ function setPrefixPath(path, callback) {
     set(SETTING_PREFIX, path, callback);
 }
 
+var SETTING_DATE_CUTOFF = "setting.dateCutoff";
+
+function getDateCutoff(callback) {
+    get(SETTING_DATE_CUTOFF, callback);
+}
+
+function setDateCutoff(date, callback) {
+    set(SETTING_DATE_CUTOFF, date, callback);
+}
+
 function get(key, callback) {
     chrome.storage.local.get([key], function(values) {
         if(values[key]===undefined) {

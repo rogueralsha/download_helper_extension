@@ -592,22 +592,35 @@ function getPageMedia(callback) {
                 }
                 link = link.href;
                 var imgEle = story.querySelector(".NB-storytitles-story-image");
-                var thumbnail = "";
+                var thumbnail = null;
                 if(imgEle!=null&&backgroundImageRegexp.test(imgEle.style.backgroundImage)) {
                     thumbnail = backgroundImageRegexp.exec(imgEle.style.backgroundImage)[1];
                 }
                 console.log("Found URL: " + link);
-                output.addLink(createLink(link, "image", null, thumbnail));
+                var dateEle = story.querySelector(".story_date ");
+                var date = null;
+                if(dateEle!=null) {
+                    date = Date.parse(dateEle.innerText);
+                }
+                output.addLink(createLink(link, "image", null, thumbnail, date));
             }
         }
 
     } else {
         // Check if we're on a shimmie site
-        var ele = document.querySelector("img.shm-main-image");
+        var ele = document.querySelector(".shm-main-image");
         if (ele != null) {
             output.artist = siteRegexp.exec(url)[1];
-            console.log("Found URL: " + ele.src);
-            output.addLink(createLink(ele.src, "image"));
+            var link = "";
+            if (ele.tagName.toLowerCase() == "img") {
+                link = ele.src;
+                output.addLink(createLink(link, "image"));
+            } else if(ele.tagName.toLowerCase()=="video") {
+                ele = ele.querySelector("source");
+                link = ele.src;
+                output.addLink(createLink(link, "video"));
+            }
+            console.log("Found URL: " + link);
         } else {
             output.error = "Site not recognized";
         }
@@ -629,10 +642,11 @@ function getFileName(link) {
     return decodeURI(link.substring(link.lastIndexOf('/') + 1).split("?")[0])
 }
 
-function createLink(url, type, filename, thumbnail) {
+function createLink(url, type, filename, thumbnail, date) {
     var output = {};
     output["url"] = resolvePartialUrl(decodeURI(url));
     output["type"] = type;
+    output["date"] = date;
 
     if (filename == null) {
         output["filename"] = getFileName(url);

@@ -8,7 +8,8 @@ function downloadPageMedia(pageMedia, callback, progress) {
                 downloadPath = trimPath(prefixPath) + "/" + trimPath(downloadPath);
             }
 
-            progress.max += pageMedia.links.length;
+            if(progress!=null)
+                progress.max += pageMedia.links.length;
 
             downloadHelper(downloadPath, pageMedia.links, function() {
                 if(callback!=null)

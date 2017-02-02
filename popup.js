@@ -28,6 +28,12 @@ function tdWrap(element) {
 
 function getDetectedMedia() {
     checkboxes = [];
+
+    var cutoffDateEle = document.getElementById("date-cutoff-input");
+
+    var cutoff = new Date(cutoffDateEle.value);
+    setDateCutoff(cutoff);
+
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         chrome.tabs.sendMessage(tabs[0].id, {command: "getPageMedia"}, function(response) {
             if(response==null) {
@@ -42,6 +48,7 @@ function getDetectedMedia() {
             var txtEle = document.getElementById("download-path-input");
             var artistEle = document.getElementById("artist-name-div");
 
+            cutoffDateEle.style.display = "none";
             btnEle.style.display = "none";
             downCloseBtnEle.style.display = "none";
             openBtnEle.display = "none";
@@ -66,6 +73,17 @@ function getDetectedMedia() {
                     check.type = "checkbox";
                     check.value = i;
                     check.checked = true;
+
+                    if(link["date"]!=null) {
+                        var date = new Date(link["date"]);
+                        text.innerHTML += "<br/>" + date.toLocaleDateString();
+                        if(cutoff!=null) {
+                            check.checked = (date>=cutoff);
+                        }
+                    } else  if(cutoff==null) {
+                        check.checked =false;
+                    }
+
 
                     if(link["thumbnail"]!=undefined) {
                         var img = document.createElement("img");
@@ -119,6 +137,7 @@ function getDetectedMedia() {
                 txtEle.style.display = "inline-block";
                 artistEle.style.display = "inline-block";
                 openBtnEle.style.display = "inline-block";
+                cutoffDateEle.style.display = "inline-block";
 
                 if(response.page_title!=null) {
                     document.getElementById("artist-name-span").innerText = response.page_title + " (" + response.artist + ") (" + response.links.length + ")";
@@ -167,6 +186,12 @@ function downloadMedia(pageMedia, callback) {
 
     if(downloadPath==null) {
         return;
+    }
+
+    if(downloadPath.length==0) {
+        if(!window.confirm("Are you sure you want to download with no path?")) {
+            return;
+        }
     }
 
     setMapping(pageMedia.artist, downloadPath, function() {})
@@ -243,5 +268,8 @@ document.getElementById('download-close-button').onclick = function() { download
 document.getElementById('open-button').onclick = openMedia;
 document.getElementById('refresh-button').onclick = getDetectedMedia;
 document.addEventListener('DOMContentLoaded', function() {
-    getDetectedMedia();
+    getDateCutoff(function(cutoff) {
+        document.getElementById("date-cutoff-input").value = cutoff;
+        getDetectedMedia();
+    });
 });
