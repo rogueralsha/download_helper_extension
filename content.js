@@ -22,6 +22,8 @@ var imgurPostRegexp = new RegExp("https?:\\/\\/imgur\.com\\/([^\\/]+)$", 'i');
 
 var newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folder)\\/(.+)", 'i');
 
+var gfycatRegexp = new RegExp("https?:\\/\\/gfycat\.com\\/([^\\/]+)$", 'i');
+var eroshareRegexp = new RegExp("https?:\\/\\/eroshare\.com\\/([^\\/]+)$", 'i');
 var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 
 var backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)")
@@ -35,7 +37,8 @@ function isSupportedPage(link) {
         instagramRegExp.test(link) ||
         tumblrRegExp.test(link) ||
         artStationRegExp.test(link) ||
-        deviantArtRegExp.test(link)) {
+        deviantArtRegExp.test(link) ||
+        gfycatRegexp.test(link)) {
         return true;
     }
     return false;
@@ -605,7 +608,28 @@ function getPageMedia(callback) {
                 output.addLink(createLink(link, "image", null, thumbnail, date));
             }
         }
+    }else if(gfycatRegexp.test(url)) {
+        console.log("Gfycat page detected");
 
+        output.artist = "gfycat";
+        console.log("Artist: " + output.artist);
+        var videoEle = document.querySelector("video.share-video");
+        var sourceEle = document.querySelector("source#webmSource");
+        var link = sourceEle.src;
+        console.log("Found URL: " + link);
+        output.addLink(createLink(link, "video", null, videoEle.poster));
+    }else if(eroshareRegexp.test(url)) {
+        console.log("Gfycat page detected");
+        var ele = document.querySelector(".user-link");
+        output.artist = ele.innerText;
+        console.log("Artist: " + output.artist);
+        var videoEles = document.querySelectorAll("video");
+        for (var j = 0; j < videoEles.length; j++) {
+            var videoEle = videoEles[j]
+            var link = videoEle.src;
+            console.log("Found URL: " + link);
+            output.addLink(createLink(link, "video", null, videoEle.poster));
+        }
     } else {
         // Check if we're on a shimmie site
         var ele = document.querySelector(".shm-main-image");

@@ -31,7 +31,10 @@ function getDetectedMedia() {
 
     var cutoffDateEle = document.getElementById("date-cutoff-input");
 
-    var cutoff = new Date(cutoffDateEle.value);
+    var cutoff;
+    if(cutoffDateEle.value.length>0) {
+        cutoff = new Date(cutoffDateEle.value);
+    }
     setDateCutoff(cutoff);
 
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
@@ -73,16 +76,16 @@ function getDetectedMedia() {
                     check.type = "checkbox";
                     check.value = i;
                     check.checked = true;
-
-                    if(link["date"]!=null) {
-                        var date = new Date(link["date"]);
-                        text.innerHTML += "<br/>" + date.toLocaleDateString();
-                        if(cutoff!=null) {
-                            check.checked = (date>=cutoff);
-                        }
-                    } else  if(cutoff==null) {
-                        check.checked =false;
-                    }
+                    //
+                    // if(link["date"]!=null) {
+                    //     var date = new Date(link["date"]);
+                    //     text.innerHTML += "<br/>" + date.toLocaleDateString();
+                    //     if(cutoff!=null) {
+                    //         check.checked = (date>=cutoff);
+                    //     }
+                    // } else if(cutoff==null) {
+                    //     check.checked =false;
+                    // }
 
 
                     if(link["thumbnail"]!=undefined) {
