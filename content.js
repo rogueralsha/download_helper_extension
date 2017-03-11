@@ -8,7 +8,7 @@ var artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 
 var tumblrRegExp = new RegExp("https?://([^\\.]+)\\.tumblr\\.com/post/.*", 'i');
 var instagramRegExp = new RegExp("https?://([^\\.]+)\\.instagram\\.com/p/.*", 'i');
 var hfRegExp = new RegExp("https?://www\\.hentai-foundry\\.com/pictures/user/([^/]+)/.*", 'i');
-var patreonPostsRegExp = new RegExp("https?://www\\.patreon\\.com/[^/]+/posts", 'i');
+var patreonPostsRegExp = new RegExp("https?://www\\.patreon\\.com/([^/]+)", 'i');
 var patreonPostRegExp = new RegExp("https?://www\\.patreon\\.com/posts/.*", 'i');
 
 var twitterRegExp = new RegExp("https?://twitter\\.com/([^/]+)/?", 'i');
@@ -317,12 +317,12 @@ function getPageMedia(callback) {
     } else if (patreonPostRegExp.test(url)) {
         console.log("Patreon post detected");
 
-        var ele = document.querySelector(".patreon-patreon-creation-shim--creator--top--text a");
+        var ele = document.querySelector("a[class*='components-CreatorCard--creatorCard']");
         var pieces = ele.href.split("/");
         output.artist = pieces[pieces.length - 1];
         console.log("Artist: " + output.artist);
 
-        ele = document.querySelector("img.patreon-creation-shim--post-file--image");
+        ele = document.querySelector("div[data-test-tag='post-card'] img");
         var download_url;
         if (ele != null) {
             var link = ele.src;
@@ -331,7 +331,7 @@ function getPageMedia(callback) {
         }
 
 
-        var elements = document.querySelectorAll(".patreon-creation-shim--attachments--item a")
+        var elements = document.querySelectorAll("div[data-test-tag='post-card'] div[class*='components-Post--cardBodyContainer'] div.stackable a[class*='components-TextButton--blue']")
         for (i = 0; i < elements.length; i++) {
             ele = elements[i];
             if (ele == null) {
@@ -348,13 +348,9 @@ function getPageMedia(callback) {
 
         console.log("Patreon artist posts detected");
 
-
-        var ele = document.querySelector(".patreon-patreon-creation-shim--creator--top--text a");
-        if (ele != null) {
-            var pieces = ele.href.split("/");
-            output.artist = pieces[pieces.length - 1];
-            console.log("Artist: " + output.artist);
-        }
+        var matches = patreonPostsRegExp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
 
         var elements = document.querySelectorAll("a")
         for (i = 0; i < elements.length; i++) {
