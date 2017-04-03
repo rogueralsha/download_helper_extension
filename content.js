@@ -331,7 +331,7 @@ function getPageMedia(callback) {
         }
 
 
-        var elements = document.querySelectorAll("div[data-test-tag='post-card'] div[class*='components-Post--cardBodyContainer'] div.stackable a[class*='components-TextButton--blue']")
+        var elements = document.querySelectorAll("div[data-test-tag='post-card'] div[class*='components-Post--cardBodyContainer'] div.stackable a[class*='components-TextButton--blue'], div[class*='components-Post--attachments'] a")
         for (i = 0; i < elements.length; i++) {
             ele = elements[i];
             if (ele == null) {

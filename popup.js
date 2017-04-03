@@ -165,10 +165,16 @@ function getOutputElement() {
 function setMessage(message) {
     getOutputElement().innerHTML = message;
 }
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-function openMedia() {
+
+async function openMedia() {
     if(pageMedia==null||pageMedia.error!=null)
         return;
+
+    var openList = [];
 
     for (var i = 0, len = checkboxes.length; i < len; i++) {
         var check = checkboxes[i];
@@ -177,8 +183,50 @@ function openMedia() {
         }
         var link = pageMedia.links[check.value];
 
-        openNewBackgroundTab(link["url"]);
+        openList.push(link["url"]);
     }
+    progDiv.innerHTML = "";
+    var progressStatus = new ProgressStatus();
+
+    progressStatus.max = openList.length;
+
+    openHelper(openList,progressStatus);
+}
+
+function openHelper(openList, progress) {
+    if(openList.length==0) {
+        return;
+    }
+
+    var delayCheck = document.getElementById("delay-check");
+
+    var link = openList.shift();
+
+    if(link===undefined) {
+        window.alert("undefined link");
+        return;
+    }
+
+    if(delayCheck.checked) {
+        openNewBackgroundTab(link, function(tab) {
+            if(progress!=null)
+                progress.sendUpdate();
+
+            openHelper(openList, progress);
+        });
+    } else {
+        openNewBackgroundTab(link, function(tab) {
+            if(progress!=null)
+                progress.sendUpdate();
+        });
+        openHelper(openList, progress);
+    }
+
+
+  //  if(document.getElementById("delay-check").checked) {
+//        await sleep(2000);
+    //}
+
 }
 
 function downloadMedia(pageMedia, callback) {
@@ -215,33 +263,7 @@ function downloadMedia(pageMedia, callback) {
 
     pageMedia.links = toDownload;
 
-    var progDiv = document.getElementById("progress-div");
     progDiv.innerHTML = "";
-
-    function ProgressStatus() {
-        this.max = 0;
-        this.value = 0;
-        this.child = null;
-        this.parent = null;
-        this.bar = document.createElement("progress");
-        this.bar.max = 1;
-        this.bar.value = 0;
-        progDiv.appendChild(this.bar);
-        this.createChild = function() {
-            this.child = new ProgressStatus();
-            this.child.parent = this;
-            return this.child;
-        }
-        this.sendUpdate = function() {
-            this.value++;
-            this.bar.max = this.max;
-            this.bar.value = this.value;
-        }
-        this.complete = function() {
-            progDiv.removeChild(this.bar);
-        }
-    }
-
     var progressStatus = new ProgressStatus();
 
     downloadPageMedia(pageMedia, function() {
@@ -249,6 +271,32 @@ function downloadMedia(pageMedia, callback) {
             callback();
         }
     }, progressStatus);
+}
+
+function ProgressStatus() {
+    this.max = 0;
+    this.value = 0;
+    this.child = null;
+    this.parent = null;
+    this.bar = document.createElement("progress");
+    this.bar.max = 1;
+    this.bar.value = 0;
+
+    progDiv.appendChild(this.bar);
+
+    this.createChild = function() {
+        this.child = new ProgressStatus();
+        this.child.parent = this;
+        return this.child;
+    }
+    this.sendUpdate = function() {
+        this.value++;
+        this.bar.max = this.max;
+        this.bar.value = this.value;
+    }
+    this.complete = function() {
+        progDiv.removeChild(this.bar);
+    }
 }
 
 
@@ -276,3 +324,6 @@ document.addEventListener('DOMContentLoaded', function() {
         getDetectedMedia();
     });
 });
+
+var progDiv = document.getElementById("progress-div");
+
