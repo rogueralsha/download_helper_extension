@@ -111,7 +111,7 @@ function getDetectedMedia() {
                     btn.onclick = function () {
                         var index = this.dataset["index"];
                         checkboxes[index].checked = !checkboxes[index].checked;
-                       for(var j = 0; j <= checkboxes.length;j++) {
+                       for(var j = 0; j < checkboxes.length;j++) {
                            checkboxes[j].checked = (index==j);
                        }
                     }
@@ -245,7 +245,12 @@ function downloadMedia(pageMedia, callback) {
         }
     }
 
-    setMapping(pageMedia.artist, downloadPath, function() {})
+    var savePathCheck = document.getElementById("save-download-path-check");
+    if(savePathCheck.checked) {
+        console.log("Saving path: " + downloadPath + " for " + pageMedia.artist);
+        setMapping(pageMedia.artist, downloadPath, function () {
+        });
+    }
 
     var toDownload = [];
 
@@ -266,7 +271,7 @@ function downloadMedia(pageMedia, callback) {
     progDiv.innerHTML = "";
     var progressStatus = new ProgressStatus();
 
-    downloadPageMedia(pageMedia, function() {
+    downloadPageMediaWithPath(pageMedia, downloadPath, function() {
         if(callback!=null) {
             callback();
         }
@@ -326,4 +331,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 var progDiv = document.getElementById("progress-div");
-

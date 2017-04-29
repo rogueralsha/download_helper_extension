@@ -1,26 +1,30 @@
 function downloadPageMedia(pageMedia, callback, progress) {
+    getMapping(pageMedia.artist, function(downloadPath) {
+       downloadPageMediaWithPath(pageMedia, downloadPath, callback, progress);
+    });
+}
+
+function downloadPageMediaWithPath(pageMedia, downloadPath, callback, progress){
     if(pageMedia==null||pageMedia.error!=null)
         return;
 
-    getMapping(pageMedia.artist, function(downloadPath) {
-        getPrefixPath(function(prefixPath) {
-            if(prefixPath.length>0) {
-                downloadPath = trimPath(prefixPath) + "/" + trimPath(downloadPath);
-            }
+    getPrefixPath(function(prefixPath) {
+        if(prefixPath.length>0) {
+            downloadPath = trimPath(prefixPath) + "/" + trimPath(downloadPath);
+        }
 
-            if(progress!=null)
-                progress.max += pageMedia.links.length;
+        if(progress!=null)
+            progress.max += pageMedia.links.length;
 
-            downloadHelper(downloadPath, pageMedia.links, function() {
-                if(callback!=null)
-                    callback();
-            }, progress);
-
-        });
+        downloadHelper(downloadPath, pageMedia.links, function() {
+            if(callback!=null)
+                callback();
+        }, progress);
 
     });
 
 }
+
 
 function downloadHelper(downloadPath, linkList, callback, progress) {
     if(linkList.length>0) {

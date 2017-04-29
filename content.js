@@ -5,9 +5,15 @@ var deviantartGalleryItemSelector = "a.torpedo-thumb-link";
 var deviantArtRegExp = new RegExp("https?://([^\\.]+)\\.deviantart\\.com/art/.*", 'i');
 
 var artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 'i');
+
 var tumblrRegExp = new RegExp("https?://([^\\.]+)\\.tumblr\\.com/post/.*", 'i');
+var tumblrRedirectRegExp = new RegExp("redirect\\?z=(.+)&t=",'i');
+
 var instagramRegExp = new RegExp("https?://([^\\.]+)\\.instagram\\.com/p/.*", 'i');
+
 var hfRegExp = new RegExp("https?://www\\.hentai-foundry\\.com/pictures/user/([^/]+)/.*", 'i');
+var hfGalleryRegExp = new RegExp("^https?://www\\.hentai-foundry\\.com/pictures/user/([^/]+)(/page/\\d+)?$", 'i');
+
 var patreonPostsRegExp = new RegExp("https?://www\\.patreon\\.com/([^/]+)", 'i');
 var patreonPostRegExp = new RegExp("https?://www\\.patreon\\.com/posts/.*", 'i');
 
@@ -20,24 +26,46 @@ var redditPostRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)/comme
 var imgurAlbumRegexp = new RegExp("https?:\\/\\/imgur\.com\\/a\\/([^\\/]+)", 'i');
 var imgurPostRegexp = new RegExp("https?:\\/\\/imgur\.com\\/([^\\/]+)$", 'i');
 
+var eHentaiGalleryRegexp = new RegExp("https?:\\/\\/e\-hentai\.org\\/g\\/.+$", 'i');
+var eHentaiImageRegexp = new RegExp("https?:\\/\\/e\-hentai\.org\\/s\\/.+$", 'i');
+var eHentaiFilenameRegexp = new RegExp("^([^:]+)::[^:]+::[^:]+$", 'i');
+
 var newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folder)\\/(.+)", 'i');
 
+var flickrRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([^\\/]+)\\/.*$", 'i');
+var flickrImageRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([^\\/]+)\\/(\\d+)\\/.*$", 'i');
+var flickrSizesRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([^\\/]+)\\/(\\d+)\\/sizes\\/([^\\/]+)\\/$", 'i');
+
 var gfycatRegexp = new RegExp("https?:\\/\\/gfycat\.com\\/([^\\/]+)$", 'i');
+var mixtapeRegexp = new RegExp("https?:\\/\\/my\.mixtape\.moe\\/([^\\/]+)$", 'i');
 var eroshareRegexp = new RegExp("https?:\\/\\/eroshare\.com\\/([^\\/]+)$", 'i');
 var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 
+//http://t.umblr.com/redirect?z=https%3A%2F%2Fmy.mixtape.moe%2Fjuiydn.png&t=YmMzMWMzNTQzOTNlMjkxZGFlZjE1MGIxZTQ2MzNmYmRjOGM0NjQ5ZixVUFFnUXI0SA%3D%3D&b=t%3AOq704QYOd310j2BA8Z3cQg&p=http%3A%2F%2Fcolonelyobo.tumblr.com%2Fpost%2F160042170354%2Fnom-full-size-hey-with-all-the-running-she-does&m=1
+
+
 var backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)")
+
+function evaluateLink(link, output, filename) {
+    if(isSupportedPage(link)) {
+        output.addLink(createLink(link,"page", filename));
+    } else if(mixtapeRegexp.test(link)) {
+        output.addLink(createLink(link,"image", filename));
+    }
+}
 
 function isSupportedPage(link) {
     if (imgurAlbumRegexp.test(link) ||
         imgurPostRegexp.test(link) ||
         twitterPostRegExp.test(link) ||
-        patreonPostRegExp.test(link) ||
+        //patreonPostRegExp.test(link) ||
         hfRegExp.test(link) ||
         instagramRegExp.test(link) ||
         tumblrRegExp.test(link) ||
         artStationRegExp.test(link) ||
         deviantArtRegExp.test(link) ||
+        flickrRegexp.test(link) ||
+        eroshareRegexp.test(link) ||
         gfycatRegexp.test(link)) {
         return true;
     }
@@ -272,10 +300,22 @@ function getPageMedia(callback) {
             });
         }
 
+        var linkEles = document.querySelectorAll("a");
+        for(var i = 0;i<linkEles.length;i++) {
+            var linkEle = linkEles[i];
+            if(tumblrRedirectRegExp.test(linkEle.href)) {
+                var link = tumblrRedirectRegExp.exec(linkEle.href)[1];
+                link = decodeURIComponent(link);
+                evaluateLink(link, output, linkEle.innerText);
+            }
+
+        }
+
+
 
 
     } else if (instagramRegExp.test(url)) {
-        var ele = document.querySelector("div._f95g7 a._4zhc5");
+        var ele = document.querySelector("header a._4zhc5");
         output.artist = ele.innerText;
         console.log("Artist: " + output.artist);
 
@@ -293,8 +333,32 @@ function getPageMedia(callback) {
                 output.addLink(createLink(link, "image"));
             }
         }
+    } else if(hfGalleryRegExp.test(url)) {
+        console.log("Hentai Foundry gallery page detected");
+        var matches = hfGalleryRegExp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
+
+        var eles = document.querySelectorAll("a.thumbLink");
+        if(eles!=null) {
+            for(i=0;i<eles.length;i++) {
+                var ele = eles[i];
+                var link = ele.href;
+                console.log("Found URL: " + link);
+                output.addLink(createLink(link, "page"));
+            }
+        }
+        var nextEle = document.querySelector("li.next a");
+        if(nextEle!=null) {
+            var link = nextEle.href;
+            if(link!=url) {
+                console.log("Found URL: " + link);
+                output.addLink(createLink(link, "page"));
+            }
+        }
+
     } else if (hfRegExp.test(url)) {
-        console.log("Hentai Foundry page detected");
+        console.log("Hentai Foundry image page detected");
         var matches = hfRegExp.exec(url);
         output.artist = matches[1];
         console.log("Artist: " + output.artist);
@@ -615,7 +679,7 @@ function getPageMedia(callback) {
         console.log("Found URL: " + link);
         output.addLink(createLink(link, "video", null, videoEle.poster));
     }else if(eroshareRegexp.test(url)) {
-        console.log("Gfycat page detected");
+        console.log("Eroshare page detected");
         var ele = document.querySelector(".user-link");
         output.artist = ele.innerText;
         console.log("Artist: " + output.artist);
@@ -626,23 +690,140 @@ function getPageMedia(callback) {
             console.log("Found URL: " + link);
             output.addLink(createLink(link, "video", null, videoEle.poster));
         }
-    } else {
-        // Check if we're on a shimmie site
-        var ele = document.querySelector(".shm-main-image");
-        if (ele != null) {
-            output.artist = siteRegexp.exec(url)[1];
-            var link = "";
-            if (ele.tagName.toLowerCase() == "img") {
-                link = ele.src;
-                output.addLink(createLink(link, "image"));
-            } else if(ele.tagName.toLowerCase()=="video") {
-                ele = ele.querySelector("source");
-                link = ele.src;
-                output.addLink(createLink(link, "video"));
+    } else if(flickrRegexp.test(url)) {
+        console.log("Flickr page detected");
+        var matches = flickrRegexp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
+
+        // Check if we're on a gallery page
+        var eles = document.querySelectorAll("div.photo-list-photo-view");
+        if(eles!=null) {
+            for (var i = 0; i < eles.length; i++) {
+                var ele = eles[i];
+                var linkEle = ele.querySelector("a");
+                var link = linkEle.href;
+
+                // We COULD go to the image page, but why waste time?!?!
+                if(flickrImageRegexp.test(link)) {
+                    var imageId = flickrImageRegexp.exec(link)[2];
+                    link = "https://www.flickr.com/photos/" + output.artist + "/" + imageId + "/sizes/";
+                    output.addLink(createLink(link, "page", null, ele.style.backgroundImage));
+                }
             }
-            console.log("Found URL: " + link);
+            var nextEle = document.querySelector("div.pagination-view a[rel=next]");
+            if(nextEle!=null) {
+                output.addLink(createLink(nextEle.href, "page"));
+            }
+
+        }
+
+        // We check if we're on the sizes page
+        if(flickrSizesRegexp.test(url)) {
+            var sizePriorities = ["sq",
+                "q",
+                "t",
+                "s",
+                "n",
+                "m",
+                "z",
+                "c",
+                "l",
+                "h",
+                "k",
+                "o"];
+            var matches = flickrSizesRegexp.exec(url);
+            var currentSize = matches[3];
+            var sizesEle = document.querySelectorAll("ol.sizes-list li:last-child a");
+            if(sizesEle.length>0) {
+                var ele = sizesEle[sizesEle.length-1];
+                var link = ele.href;
+                var linkSize = flickrSizesRegexp.exec(link)[3];
+                if(sizePriorities.indexOf(currentSize)<sizePriorities.indexOf(linkSize)) {
+                    output.addLink(createLink(link, "page"));
+                } else {
+                    var imgEle = document.querySelector("div#allsizes-photo img");
+                    output.addLink(createLink(imgEle.src, "image"));
+                }
+            } else {
+                var imgEle = document.querySelector("div#allsizes-photo img");
+                output.addLink(createLink(imgEle.src, "image"));
+            }
+        }
+    } else if(eHentaiGalleryRegexp.test(url)) {
+        console.log("e-Hentai gallery detected");
+        output.artist = "e-Hentai";
+        console.log("Artist: " + output.artist);
+        var eles = document.querySelectorAll("div.gdtm a, div.gdtl a");
+        for(var i = 0;i<eles.length;i++) {
+            var ele = eles[i];
+            var imgEle = ele.querySelector("img");
+            output.addLink(createLink(ele.href, "page",null, imgEle.src));
+        }
+        var nextEle = document.querySelector("div.gtb table.ptb td:last-child a");
+        if(nextEle!=null) {
+            output.addLink(createLink(nextEle.href, "page"));
+        }
+    } else if(eHentaiImageRegexp.test(url)) {
+        console.log("e-Hentai image detected");
+        output.artist = "e-Hentai";
+        console.log("Artist: " + output.artist);
+
+        // Have to grab the file's name
+        //<div>10_0030.jpg :: 1280 x 1920 :: 246.8 KB</div>
+        var divEle = document.querySelector("div#i2 div:last-child");
+        var filename = null;
+        if(divEle!=null&&eHentaiFilenameRegexp.test(divEle.innerText)) {
+            filename = eHentaiFilenameRegexp.exec(divEle.innerText)[1].trim();
+        }
+
+        var ele = document.querySelector("div#i7 a");
+        if(ele!=null) {
+            output.addLink(createLink(ele.href, "image", filename));
+        }
+    }
+
+     else {
+        // Check if we're on a shimmie site
+        var eles = document.querySelectorAll("div.shm-thumb");
+        if(eles.length>0) {
+            output.artist = siteRegexp.exec(url)[1];
+            for (var i = 0; i < eles.length; i++) {
+                var ele = eles[i];
+                var imgEle = ele.querySelector("img");
+                var linkEle = ele.querySelector("a:nth-child(3)");
+                var link = linkEle.href;
+
+                output.addLink(createLink(link, "file", null, imgEle.src));
+            }
+            eles = document.querySelectorAll("section#paginator a");
+            if(eles!=null) {
+                for (var i = 0; i < eles.length; i++) {
+                    var ele = eles[i];
+                    if(ele.innerText=="Next") {
+                        output.addLink(createLink(ele.href, "page"));
+                    }
+                }
+            }
+
+
         } else {
-            output.error = "Site not recognized";
+            var ele = document.querySelector(".shm-main-image");
+            if (ele != null) {
+                output.artist = siteRegexp.exec(url)[1];
+                var link = "";
+                if (ele.tagName.toLowerCase() == "img") {
+                    link = ele.src;
+                    output.addLink(createLink(link, "image"));
+                } else if (ele.tagName.toLowerCase() == "video") {
+                    ele = ele.querySelector("source");
+                    link = ele.src;
+                    output.addLink(createLink(link, "video"));
+                }
+                console.log("Found URL: " + link);
+            } else {
+                output.error = "Site not recognized";
+            }
         }
     }
 
@@ -663,6 +844,7 @@ function getFileName(link) {
 }
 
 function createLink(url, type, filename, thumbnail, date) {
+    console.log("Creating " + type + " link: " + url)
     var output = {};
     output["url"] = resolvePartialUrl(decodeURI(url));
     output["type"] = type;
