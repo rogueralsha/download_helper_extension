@@ -7,7 +7,7 @@ var deviantArtRegExp = new RegExp("https?://([^\\.]+)\\.deviantart\\.com/art/.*"
 var artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 'i');
 
 var tumblrRegExp = new RegExp("https?://([^\\.]+)\\.tumblr\\.com/post/.*", 'i');
-var tumblrRedirectRegExp = new RegExp("redirect\\?z=(.+)&t=",'i');
+var tumblrRedirectRegExp = new RegExp("redirect\\?z=(.+)&t=", 'i');
 
 var instagramRegExp = new RegExp("https?://([^\\.]+)\\.instagram\\.com/p/.*", 'i');
 
@@ -47,10 +47,10 @@ var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 var backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)")
 
 function evaluateLink(link, output, filename) {
-    if(isSupportedPage(link)) {
-        output.addLink(createLink(link,"page", filename));
-    } else if(mixtapeRegexp.test(link)) {
-        output.addLink(createLink(link,"image", filename));
+    if (isSupportedPage(link)) {
+        output.addLink(createLink(link, "page", filename));
+    } else if (mixtapeRegexp.test(link)) {
+        output.addLink(createLink(link, "image", filename));
     }
 }
 
@@ -77,13 +77,13 @@ var cachedLinks = [];
 var imgEles = [];
 
 function downloadItem(link, callback) {
-    getPageMedia(function(result) {
+    getPageMedia(function (result) {
         var src = event.srcElement.src;
         if (result.error == null) {
             result.links = [];
             result.addLink(createLink(link, "image"));
             chrome.runtime.sendMessage({command: "download", results: result}, function (response) {
-                if(callback!=null) {
+                if (callback != null) {
                     callback();
                 }
             });
@@ -101,16 +101,17 @@ function downloadHelperPageInit() {
     var btnEle = document.createElement("input");
     btnEle.type = "button";
     btnEle.value = "Download";
-    btnEle.onclick = function(event) {
+    btnEle.onclick = function (event) {
         downloadItem(toolbarEle.dataset["link"]);
     };
     toolbarEle.appendChild(btnEle);
     btnEle = document.createElement("input");
     btnEle.type = "button";
     btnEle.value = "Download & Close";
-    btnEle.onclick = function(event) {
+    btnEle.onclick = function (event) {
         downloadItem(toolbarEle.dataset["link"], function () {
-            chrome.runtime.sendMessage({command: "closeTab"}, function() {});
+            chrome.runtime.sendMessage({command: "closeTab"}, function () {
+            });
         });
     };
     toolbarEle.appendChild(btnEle);
@@ -126,7 +127,7 @@ function downloadHelperPageInit() {
             imgEle.addEventListener("dragend", function (event) {
                 downloadItem(imgEle.src);
             });
-            imgEle.addEventListener("mouseover", function(event) {
+            imgEle.addEventListener("mouseover", function (event) {
                 var rect = event.srcElement.getBoundingClientRect();
                 var y = rect.top;
                 var x = rect.left;
@@ -261,9 +262,9 @@ function getPageMedia(callback) {
                 }
             }
         }
-    } else if (tumblrRegExp.test(url)||(metaAppName!=null&&metaAppName.content.toLowerCase()=="tumblr")||document.querySelector("meta[name='tumblr-theme']")!=null) {
+    } else if (tumblrRegExp.test(url) || (metaAppName != null && metaAppName.content.toLowerCase() == "tumblr") || document.querySelector("meta[name='tumblr-theme']") != null) {
         console.log("Tumblr page detected");
-        if(tumblrRegExp.test(url)) {
+        if (tumblrRegExp.test(url)) {
             output.artist = tumblrRegExp.exec(url)[1];
         } else {
             output.artist = siteRegexp.exec(url)[1];
@@ -285,33 +286,51 @@ function getPageMedia(callback) {
         console.log("Artist: " + output.artist);
 
         //http://68.media.tumblr.com/a3bc1e014074b7b333469b91adc04022/tumblr_oi6yomYX0X1rn062io1_500.jpg
+
+
+        var iframes = document.querySelectorAll("iframe.photoset");
+        if (iframes != null && iframes.length > 0) {
+            console.log("Found photoset iframes");
+            for (var i = 0; i < 1; i++) {
+                try {
+                    iframe = iframes[i];
+                    async = true;
+                    chrome.runtime.sendMessage({url:iframe.src,command: "getPageMedia"}, function(response) {
+                        if (response == null) {
+                            console.log("No media found in iframe (null)");
+                            return;
+                        }
+
+                        if (response.error != null) {
+                            console.log(response.error);
+                        } else if (response.links.length == 0) {
+                            console.log("No media found in iframe");
+                        } else {
+                            for (var i = 0, len = response.links.length; i < len; i++) {
+                                output.addLink(response.links[i]);
+                            }
+                        }
+                        callback(output);
+                    });
+                } catch (err) {
+                    console.log(err);
+                }
+            }
+        }
+
         output.links = getTumblrImages(document);
 
 
-        var iframe = document.querySelector("iframe.photoset");
-        if (iframe != null) {
-            console.log("Found photoset iframe");
-            var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
-
-            var iframeLinks = getTumblrImages(iframeDocument);
-
-            iframeLinks.forEach(function (link) {
-                output.addLink(link);
-            });
-        }
-
         var linkEles = document.querySelectorAll("a");
-        for(var i = 0;i<linkEles.length;i++) {
+        for (var i = 0; i < linkEles.length; i++) {
             var linkEle = linkEles[i];
-            if(tumblrRedirectRegExp.test(linkEle.href)) {
+            if (tumblrRedirectRegExp.test(linkEle.href)) {
                 var link = tumblrRedirectRegExp.exec(linkEle.href)[1];
                 link = decodeURIComponent(link);
-                evaluateLink(link, output, linkEle.innerText);
+                evaluateLink(link, output);
             }
 
         }
-
-
 
 
     } else if (instagramRegExp.test(url)) {
@@ -333,15 +352,15 @@ function getPageMedia(callback) {
                 output.addLink(createLink(link, "image"));
             }
         }
-    } else if(hfGalleryRegExp.test(url)) {
+    } else if (hfGalleryRegExp.test(url)) {
         console.log("Hentai Foundry gallery page detected");
         var matches = hfGalleryRegExp.exec(url);
         output.artist = matches[1];
         console.log("Artist: " + output.artist);
 
         var eles = document.querySelectorAll("a.thumbLink");
-        if(eles!=null) {
-            for(i=0;i<eles.length;i++) {
+        if (eles != null) {
+            for (i = 0; i < eles.length; i++) {
                 var ele = eles[i];
                 var link = ele.href;
                 console.log("Found URL: " + link);
@@ -349,9 +368,9 @@ function getPageMedia(callback) {
             }
         }
         var nextEle = document.querySelector("li.next a");
-        if(nextEle!=null) {
+        if (nextEle != null) {
             var link = nextEle.href;
-            if(link!=url) {
+            if (link != url) {
                 console.log("Found URL: " + link);
                 output.addLink(createLink(link, "page"));
             }
@@ -544,7 +563,7 @@ function getPageMedia(callback) {
                 output.addLink(createLink(link, "image"));
             }
         }
-    } else if(document.querySelector("#cpg_main_block_outer")!=null) {
+    } else if (document.querySelector("#cpg_main_block_outer") != null) {
         console.log("Coppermine site detected");
         output.artist = siteRegexp.exec(url)[1];
 
@@ -636,39 +655,39 @@ function getPageMedia(callback) {
                 }
             }
         }
-    }else if(newsBlurRegExp.test(url)) {
+    } else if (newsBlurRegExp.test(url)) {
         console.log("Newsblur page detected");
 
         var matches = newsBlurRegExp.exec(url);
         output.artist = matches[2];
         console.log("Artist: " + output.artist);
 
-        var stories= document.querySelectorAll(".NB-story-titles .NB-story-title-container");
+        var stories = document.querySelectorAll(".NB-story-titles .NB-story-title-container");
 
         if (stories != null && stories.length > 0) {
             for (var j = 0; j < stories.length; j++) {
                 var story = stories[j];
 
                 var link = story.querySelector(".NB-storytitles-content a");
-                if(link==null) {
+                if (link == null) {
                     continue;
                 }
                 link = link.href;
                 var imgEle = story.querySelector(".NB-storytitles-story-image");
                 var thumbnail = null;
-                if(imgEle!=null&&backgroundImageRegexp.test(imgEle.style.backgroundImage)) {
+                if (imgEle != null && backgroundImageRegexp.test(imgEle.style.backgroundImage)) {
                     thumbnail = backgroundImageRegexp.exec(imgEle.style.backgroundImage)[1];
                 }
                 console.log("Found URL: " + link);
                 var dateEle = story.querySelector(".story_date ");
                 var date = null;
-                if(dateEle!=null) {
+                if (dateEle != null) {
                     date = Date.parse(dateEle.innerText);
                 }
                 output.addLink(createLink(link, "image", null, thumbnail, date));
             }
         }
-    }else if(gfycatRegexp.test(url)) {
+    } else if (gfycatRegexp.test(url)) {
         console.log("Gfycat page detected");
 
         output.artist = "gfycat";
@@ -678,7 +697,7 @@ function getPageMedia(callback) {
         var link = sourceEle.src;
         console.log("Found URL: " + link);
         output.addLink(createLink(link, "video", null, videoEle.poster));
-    }else if(eroshareRegexp.test(url)) {
+    } else if (eroshareRegexp.test(url)) {
         console.log("Eroshare page detected");
         var ele = document.querySelector(".user-link");
         output.artist = ele.innerText;
@@ -690,7 +709,7 @@ function getPageMedia(callback) {
             console.log("Found URL: " + link);
             output.addLink(createLink(link, "video", null, videoEle.poster));
         }
-    } else if(flickrRegexp.test(url)) {
+    } else if (flickrRegexp.test(url)) {
         console.log("Flickr page detected");
         var matches = flickrRegexp.exec(url);
         output.artist = matches[1];
@@ -698,28 +717,28 @@ function getPageMedia(callback) {
 
         // Check if we're on a gallery page
         var eles = document.querySelectorAll("div.photo-list-photo-view");
-        if(eles!=null) {
+        if (eles != null) {
             for (var i = 0; i < eles.length; i++) {
                 var ele = eles[i];
                 var linkEle = ele.querySelector("a");
                 var link = linkEle.href;
 
                 // We COULD go to the image page, but why waste time?!?!
-                if(flickrImageRegexp.test(link)) {
+                if (flickrImageRegexp.test(link)) {
                     var imageId = flickrImageRegexp.exec(link)[2];
                     link = "https://www.flickr.com/photos/" + output.artist + "/" + imageId + "/sizes/";
                     output.addLink(createLink(link, "page", null, ele.style.backgroundImage));
                 }
             }
             var nextEle = document.querySelector("div.pagination-view a[rel=next]");
-            if(nextEle!=null) {
+            if (nextEle != null) {
                 output.addLink(createLink(nextEle.href, "page"));
             }
 
         }
 
         // We check if we're on the sizes page
-        if(flickrSizesRegexp.test(url)) {
+        if (flickrSizesRegexp.test(url)) {
             var sizePriorities = ["sq",
                 "q",
                 "t",
@@ -735,11 +754,11 @@ function getPageMedia(callback) {
             var matches = flickrSizesRegexp.exec(url);
             var currentSize = matches[3];
             var sizesEle = document.querySelectorAll("ol.sizes-list li:last-child a");
-            if(sizesEle.length>0) {
-                var ele = sizesEle[sizesEle.length-1];
+            if (sizesEle.length > 0) {
+                var ele = sizesEle[sizesEle.length - 1];
                 var link = ele.href;
                 var linkSize = flickrSizesRegexp.exec(link)[3];
-                if(sizePriorities.indexOf(currentSize)<sizePriorities.indexOf(linkSize)) {
+                if (sizePriorities.indexOf(currentSize) < sizePriorities.indexOf(linkSize)) {
                     output.addLink(createLink(link, "page"));
                 } else {
                     var imgEle = document.querySelector("div#allsizes-photo img");
@@ -750,21 +769,21 @@ function getPageMedia(callback) {
                 output.addLink(createLink(imgEle.src, "image"));
             }
         }
-    } else if(eHentaiGalleryRegexp.test(url)) {
+    } else if (eHentaiGalleryRegexp.test(url)) {
         console.log("e-Hentai gallery detected");
         output.artist = "e-Hentai";
         console.log("Artist: " + output.artist);
         var eles = document.querySelectorAll("div.gdtm a, div.gdtl a");
-        for(var i = 0;i<eles.length;i++) {
+        for (var i = 0; i < eles.length; i++) {
             var ele = eles[i];
             var imgEle = ele.querySelector("img");
-            output.addLink(createLink(ele.href, "page",null, imgEle.src));
+            output.addLink(createLink(ele.href, "page", null, imgEle.src));
         }
         var nextEle = document.querySelector("div.gtb table.ptb td:last-child a");
-        if(nextEle!=null) {
+        if (nextEle != null) {
             output.addLink(createLink(nextEle.href, "page"));
         }
-    } else if(eHentaiImageRegexp.test(url)) {
+    } else if (eHentaiImageRegexp.test(url)) {
         console.log("e-Hentai image detected");
         output.artist = "e-Hentai";
         console.log("Artist: " + output.artist);
@@ -773,20 +792,20 @@ function getPageMedia(callback) {
         //<div>10_0030.jpg :: 1280 x 1920 :: 246.8 KB</div>
         var divEle = document.querySelector("div#i2 div:last-child");
         var filename = null;
-        if(divEle!=null&&eHentaiFilenameRegexp.test(divEle.innerText)) {
+        if (divEle != null && eHentaiFilenameRegexp.test(divEle.innerText)) {
             filename = eHentaiFilenameRegexp.exec(divEle.innerText)[1].trim();
         }
 
         var ele = document.querySelector("div#i7 a");
-        if(ele!=null) {
+        if (ele != null) {
             output.addLink(createLink(ele.href, "image", filename));
         }
     }
 
-     else {
+    else {
         // Check if we're on a shimmie site
         var eles = document.querySelectorAll("div.shm-thumb");
-        if(eles.length>0) {
+        if (eles.length > 0) {
             output.artist = siteRegexp.exec(url)[1];
             for (var i = 0; i < eles.length; i++) {
                 var ele = eles[i];
@@ -797,10 +816,10 @@ function getPageMedia(callback) {
                 output.addLink(createLink(link, "file", null, imgEle.src));
             }
             eles = document.querySelectorAll("section#paginator a");
-            if(eles!=null) {
+            if (eles != null) {
                 for (var i = 0; i < eles.length; i++) {
                     var ele = eles[i];
-                    if(ele.innerText=="Next") {
+                    if (ele.innerText == "Next") {
                         output.addLink(createLink(ele.href, "page"));
                     }
                 }
@@ -852,7 +871,7 @@ function createLink(url, type, filename, thumbnail, date) {
 
     if (filename == null) {
         output["filename"] = getFileName(url);
-        if(output["filename"].length==0) {
+        if (output["filename"].length == 0) {
             output["filename"] = url;
         }
     } else {
@@ -860,9 +879,9 @@ function createLink(url, type, filename, thumbnail, date) {
         output["filename"] = filename;
     }
 
-    if(thumbnail!=null) {
+    if (thumbnail != null) {
         output["thumbnail"] = thumbnail;
-    } else if(type=="image") {
+    } else if (type == "image") {
         output["thumbnail"] = url;
     }
     return output;
@@ -871,9 +890,10 @@ function createLink(url, type, filename, thumbnail, date) {
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         console.log(sender.tab ?
-        "from a content script:" + sender.tab.url :
+            "from a content script:" + sender.tab.url :
             "from the extension");
-        if (request.command == "getPageMedia") {
+        if (request.command == "getPageMedia"
+            &&request.url==window.location.href) {
             return getPageMedia(function (result) {
                 if (result.artist != null) {
                     result.artist = result.artist.toLowerCase();

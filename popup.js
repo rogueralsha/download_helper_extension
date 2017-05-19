@@ -26,6 +26,8 @@ function tdWrap(element) {
     return output;
 }
 
+
+
 function getDetectedMedia() {
     checkboxes = [];
 
@@ -37,34 +39,36 @@ function getDetectedMedia() {
     }
     setDateCutoff(cutoff);
 
+    var btnEle = document.getElementById("download-button");
+    var downCloseBtnEle = document.getElementById("download-close-button");
+
+    var openBtnEle = document.getElementById("open-button");
+    var txtEle = document.getElementById("download-path-input");
+    var artistEle = document.getElementById("artist-name-div");
+
+    cutoffDateEle.style.display = "none";
+    btnEle.style.display = "none";
+    downCloseBtnEle.style.display = "none";
+    openBtnEle.display = "none";
+    txtEle.style.display = "none";
+    artistEle.style.display = "none";
+
+    getOutputElement().innerHTML = "";
+    var table = document.createElement("table");
+
+
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, {command: "getPageMedia"}, function(response) {
+        chrome.tabs.sendMessage(tabs[0].id, {url:tabs[0].url,command: "getPageMedia"}, function(response) {
             if(response==null) {
                 setMessage("No media found (null)");
                 return;
             }
-
-            var btnEle = document.getElementById("download-button");
-            var downCloseBtnEle = document.getElementById("download-close-button");
-
-            var openBtnEle = document.getElementById("open-button");
-            var txtEle = document.getElementById("download-path-input");
-            var artistEle = document.getElementById("artist-name-div");
-
-            cutoffDateEle.style.display = "none";
-            btnEle.style.display = "none";
-            downCloseBtnEle.style.display = "none";
-            openBtnEle.display = "none";
-            txtEle.style.display = "none";
-            artistEle.style.display = "none";
 
             if(response.error!=null) {
                 setMessage(response.error);
             }else if(response.links.length==0) {
                 setMessage("No media found");
             } else {
-                getOutputElement().innerHTML = "";
-                var table = document.createElement("table");
                 for (var i = 0, len = response.links.length; i < len; i++) {
                     var link = response.links[i];
                     var row = document.createElement("tr");
@@ -163,7 +167,7 @@ function getOutputElement() {
 }
 
 function setMessage(message) {
-    getOutputElement().innerHTML = message;
+    getOutputElement("message_output").innerHTML = message;
 }
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -320,6 +324,8 @@ document.getElementById('download-close-button').onclick = function() { download
         //window.close();
     });
 }); };
+
+
 
 document.getElementById('open-button').onclick = openMedia;
 document.getElementById('refresh-button').onclick = getDetectedMedia;
