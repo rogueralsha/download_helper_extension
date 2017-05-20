@@ -38,7 +38,7 @@ function downloadHelper(downloadPath, linkList, callback, progress) {
 
         if(link["type"]=="page") {
             openNewBackgroundTab(link["url"],function(tab) {
-                chrome.tabs.sendMessage(tab.id, {command: "getPageMedia"}, function(response) {
+                chrome.tabs.sendMessage(tab.id, {url: link["url"],command: "getPageMedia"}, function(response) {
                     if (response == null||response.error!=null) {
                         return;
                     }
