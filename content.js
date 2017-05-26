@@ -298,7 +298,7 @@ function getPageMedia(callback) {
                     chrome.runtime.sendMessage({url:iframe.src,command: "getPageMedia"}, function(response) {
                         if (response == null) {
                             console.log("No media found in iframe (null)");
-                            return;
+                            callback(output);
                         }
 
                         if (response.error != null) {
@@ -539,7 +539,7 @@ function getPageMedia(callback) {
 
         async = true;
 
-        xmlhttp.open("GET", "http://imgur.com/ajaxalbums/getimages/" + albumHash + "/hit.json", true);
+        xmlhttp.open("GET", "https://imgur.com/ajaxalbums/getimages/" + albumHash + "/hit.json", true);
         xmlhttp.send();
     } else if (imgurPostRegexp.test(url)) {
         console.log("Imgur post page detected");
