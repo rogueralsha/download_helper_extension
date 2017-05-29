@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/download_helper_extension.iml" filepath="$PROJECT_DIR$/.idea/download_helper_extension.iml" />
+      <module fileurl="file://D:\Source\download_helper_extension\.idea\download_helper_extension.iml" filepath="D:\Source\download_helper_extension\.idea\download_helper_extension.iml" />
     </modules>
   </component>
 </project>

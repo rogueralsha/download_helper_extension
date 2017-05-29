@@ -338,7 +338,7 @@ function getPageMedia(callback) {
         output.artist = ele.innerText;
         console.log("Artist: " + output.artist);
 
-        var elements = document.querySelectorAll("img._icyx7");
+        var elements = document.querySelectorAll("img._icyx7, video");
         if (elements == null || elements.length == 0) {
             output.error = "No media found";
         }
@@ -349,7 +349,11 @@ function getPageMedia(callback) {
             } else {
                 var link = ele.src;
                 console.log("Found URL: " + link);
-                output.addLink(createLink(link, "image"));
+                if(ele.nodeName.toLowerCase()=="video")  {
+                    output.addLink(createLink(link, "video", null, ele.poster));
+                } else {
+                    output.addLink(createLink(link, "image"));
+                }
             }
         }
     } else if (hfGalleryRegExp.test(url)) {
