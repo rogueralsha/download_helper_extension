@@ -9,7 +9,8 @@ var artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 
 var tumblrRegExp = new RegExp("https?://([^\\.]+)\\.tumblr\\.com/post/.*", 'i');
 var tumblrRedirectRegExp = new RegExp("redirect\\?z=(.+)&t=", 'i');
 
-var instagramRegExp = new RegExp("https?://([^\\.]+)\\.instagram\\.com/p/.*", 'i');
+var instagramRegExp = new RegExp("https?://www\\.instagram\\.com/p/.*", 'i');
+var instagramUserRegExp = new RegExp("https?://www\\.instagram\\.com/([^/]+)/", 'i');
 
 var hfRegExp = new RegExp("https?://www\\.hentai-foundry\\.com/pictures/user/([^/]+)/.*", 'i');
 var hfGalleryRegExp = new RegExp("^https?://www\\.hentai-foundry\\.com/pictures/user/([^/]+)(/page/\\d+)?$", 'i');
@@ -23,8 +24,8 @@ var twitterPostRegExp = new RegExp("https?://twitter\\.com/([^/]+)/status/.+", '
 var redditRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)\\/.+", 'i');
 var redditPostRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)/comments/.+", 'i');
 
-var imgurAlbumRegexp = new RegExp("https?:\\/\\/imgur\.com\\/a\\/([^\\/]+)", 'i');
-var imgurPostRegexp = new RegExp("https?:\\/\\/imgur\.com\\/([^\\/]+)$", 'i');
+var imgurAlbumRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/a\\/([^\\/]+)", 'i');
+var imgurPostRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/([^\\/]+)$", 'i');
 
 var eHentaiGalleryRegexp = new RegExp("https?:\\/\\/e\-hentai\.org\\/g\\/.+$", 'i');
 var eHentaiImageRegexp = new RegExp("https?:\\/\\/e\-hentai\.org\\/s\\/.+$", 'i');
@@ -87,10 +88,8 @@ function downloadItem(link, callback) {
                     callback();
                 }
             });
-
         }
     });
-
 }
 
 function downloadHelperPageInit() {
@@ -175,7 +174,7 @@ function downloadHelperPageInit() {
 
 window.onload = downloadHelperPageInit;
 
-function getPageMedia(callback) {
+async function getPageMedia(callback)  {
     var url = window.location.href;
     var output = {};
     output.links = [];
@@ -334,6 +333,7 @@ function getPageMedia(callback) {
 
 
     } else if (instagramRegExp.test(url)) {
+        console.log("Instagram page detected")
         var ele = document.querySelector("header a._4zhc5");
         output.artist = ele.innerText;
         console.log("Artist: " + output.artist);
@@ -349,13 +349,54 @@ function getPageMedia(callback) {
             } else {
                 var link = ele.src;
                 console.log("Found URL: " + link);
-                if(ele.nodeName.toLowerCase()=="video")  {
+                if (ele.nodeName.toLowerCase() == "video") {
                     output.addLink(createLink(link, "video", null, ele.poster));
                 } else {
                     output.addLink(createLink(link, "image"));
                 }
             }
         }
+    } else if(instagramUserRegExp.test(url)) {
+        console.log("Instagram user page detected")
+
+        var ele = document.querySelector("a._8imhp");
+        if(ele!=null) {
+            var prevHeight = document.body.scrollHeight;
+            ele.click();
+            await sleep(500);
+            while(prevHeight!=document.body.scrollHeight) {
+                window.scrollTo(0, document.body.scrollHeight);
+                prevHeight = document.body.scrollHeight;
+                await sleep(750);
+            }
+            window.scrollTo(0, document.body.scrollHeight);
+
+        }
+
+
+
+        ele = document.querySelector("h1._i572c ");
+        output.artist = ele.innerText;
+        console.log("Artist: " + output.artist);
+
+        var elements = document.querySelectorAll("div._myci9 a._8mlbc ");
+        if (elements == null || elements.length == 0) {
+            output.error = "No media found";
+        }
+        for (i = 0; i < elements.length; i++) {
+            ele = elements[i];
+            if (ele == null) {
+                output.error = "No media found";
+            } else {
+                var link = ele.href;
+                link = link.split("?")[0];
+                console.log("Found URL: " + link);
+                var imgEle = ele.querySelector("img");
+                output.addLink(createLink(link, "page", null, imgEle.src));
+            }
+        }
+
+
     } else if (hfGalleryRegExp.test(url)) {
         console.log("Hentai Foundry gallery page detected");
         var matches = hfGalleryRegExp.exec(url);
@@ -507,7 +548,7 @@ function getPageMedia(callback) {
 
         var titleEle = document.querySelector("h1.post-title");
         var matches = imgurAlbumRegexp.exec(url);
-        var albumHash = matches[1];
+        var albumHash = matches[2];
         if (titleEle != null) {
             output.artist = titleEle.innerText;
         } else {
@@ -553,7 +594,7 @@ function getPageMedia(callback) {
             output.artist = titleEle.innerText;
         } else {
             var matches = imgurPostRegexp.exec(url);
-            output.artist = matches[1];
+            output.artist = matches[2];
         }
         console.log("Artist: " + output.artist);
 
@@ -807,9 +848,12 @@ function getPageMedia(callback) {
     }
 
     else {
+        var otherSiteFound = false;
         // Check if we're on a shimmie site
         var eles = document.querySelectorAll("div.shm-thumb");
         if (eles.length > 0) {
+            otherSiteFound = true;
+            console.log("Shimmie site detected");
             output.artist = siteRegexp.exec(url)[1];
             for (var i = 0; i < eles.length; i++) {
                 var ele = eles[i];
@@ -833,6 +877,7 @@ function getPageMedia(callback) {
         } else {
             var ele = document.querySelector(".shm-main-image");
             if (ele != null) {
+                otherSiteFound = true;
                 output.artist = siteRegexp.exec(url)[1];
                 var link = "";
                 if (ele.tagName.toLowerCase() == "img") {
@@ -844,16 +889,37 @@ function getPageMedia(callback) {
                     output.addLink(createLink(link, "video"));
                 }
                 console.log("Found URL: " + link);
-            } else {
-                output.error = "Site not recognized";
             }
         }
-    }
 
+        // check for wp gallery
+        var eles = document.querySelectorAll(".ngg-galleryoverview  div.ngg-gallery-thumbnail-box");
+        if (eles.length > 0) {
+            otherSiteFound = true;
+            output.artist = siteRegexp.exec(url)[1];
+            for (var i = 0; i < eles.length; i++) {
+                var ele = eles[i];
+                var imgEle = ele.querySelector("img");
+                var linkEle = ele.querySelector("a");
+                var link = linkEle.href;
+
+                output.addLink(createLink(link, "file", null, imgEle.src));
+            }
+            var ele = document.querySelector("div.ngg-navigation a.next");
+            if (ele != null) {
+                output.addLink(createLink(ele.href, "page"));
+            }
+
+        }
+
+        if(!otherSiteFound) {
+            output.error = "Site not recognized";
+        }
+    }
     if (!async) {
         callback(output);
     }
-    return async;
+    return true;
 }
 
 function resolvePartialUrl(url) {
@@ -867,6 +933,14 @@ function getFileName(link) {
 }
 
 function createLink(url, type, filename, thumbnail, date) {
+    if(imgurPostRegexp.test(url)) {
+        // Mobile imgur links redirect, sow e need to filter them a bit
+        var m = imgurPostRegexp.exec(url);
+        if(m[1]=="m.") {
+            url = url.replace("//m.imgur.", "//imgur.")
+        }
+    }
+
     console.log("Creating " + type + " link: " + url)
     var output = {};
     output["url"] = resolvePartialUrl(decodeURI(url));
@@ -898,13 +972,14 @@ chrome.runtime.onMessage.addListener(
             "from the extension");
         if (request.command == "getPageMedia"
             &&request.url==window.location.href) {
-            return getPageMedia(function (result) {
+            getPageMedia(function (result) {
                 if (result.artist != null) {
                     result.artist = result.artist.toLowerCase();
                 }
                 console.log("Total media items found: " + result.links.length);
                 sendResponse(result);
             });
+            return true;
         }
 
     });
@@ -946,5 +1021,19 @@ function getTumblrImages(documentRoot) {
     } else {
         console.log("No img tags found");
     }
+    return output;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function waitToLoad() {
+    var output = new Promise(function(resolve, reject) {
+            document.addEventListener('DOMContentLoaded', function(e) {
+                e.target.removeEventListener(e.type, arguments.callee);
+                resolve();
+            });
+    });
     return output;
 }
