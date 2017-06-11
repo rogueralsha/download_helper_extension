@@ -27,6 +27,10 @@ var redditPostRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)/comme
 var imgurAlbumRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/a\\/([^\\/]+)", 'i');
 var imgurPostRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/([^\\/]+)$", 'i');
 
+var postimgAlbumRegexp = new RegExp("https?:\\/\\/postimg\\.org\\/gallery\\/([^\\/]+)/", 'i');
+var postimgPostRegexp = new RegExp("https?:\\/\\/postimg\\.org\\/image\\/([^\\/]+)/", 'i');
+
+
 var eHentaiGalleryRegexp = new RegExp("https?:\\/\\/e\-hentai\.org\\/g\\/.+$", 'i');
 var eHentaiImageRegexp = new RegExp("https?:\\/\\/e\-hentai\.org\\/s\\/.+$", 'i');
 var eHentaiFilenameRegexp = new RegExp("^([^:]+)::[^:]+::[^:]+$", 'i');
@@ -67,7 +71,9 @@ function isSupportedPage(link) {
         deviantArtRegExp.test(link) ||
         flickrRegexp.test(link) ||
         eroshareRegexp.test(link) ||
-        gfycatRegexp.test(link)) {
+        gfycatRegexp.test(link) ||
+        postimgPostRegexp.test(link)||
+        postimgAlbumRegexp.test(link)) {
         return true;
     }
     return false;
@@ -174,12 +180,13 @@ function downloadHelperPageInit() {
 
 window.onload = downloadHelperPageInit;
 
-async function getPageMedia(callback)  {
+async function getPageMedia(callback) {
     var url = window.location.href;
     var output = {};
     output.links = [];
     output.action = "download";
     output.error = null;
+    output.saveByDefault = true;
     output.addLink = function (link) {
         for (var i = 0; i < this.links.length; i++) {
             if (this.links[i].url == link.url) {
@@ -294,7 +301,7 @@ async function getPageMedia(callback)  {
                 try {
                     iframe = iframes[i];
                     async = true;
-                    chrome.runtime.sendMessage({url:iframe.src,command: "getPageMedia"}, function(response) {
+                    chrome.runtime.sendMessage({url: iframe.src, command: "getPageMedia"}, function (response) {
                         if (response == null) {
                             console.log("No media found in iframe (null)");
                             callback(output);
@@ -356,23 +363,14 @@ async function getPageMedia(callback)  {
                 }
             }
         }
-    } else if(instagramUserRegExp.test(url)) {
+    } else if (instagramUserRegExp.test(url)) {
         console.log("Instagram user page detected")
 
         var ele = document.querySelector("a._8imhp");
-        if(ele!=null) {
-            var prevHeight = document.body.scrollHeight;
+        if (ele != null) {
             ele.click();
-            await sleep(500);
-            while(prevHeight!=document.body.scrollHeight) {
-                window.scrollTo(0, document.body.scrollHeight);
-                prevHeight = document.body.scrollHeight;
-                await sleep(750);
-            }
-            window.scrollTo(0, document.body.scrollHeight);
-
+            await triggerAutoLoad();
         }
-
 
 
         ele = document.querySelector("h1._i572c ");
@@ -545,6 +543,7 @@ async function getPageMedia(callback)  {
         }
     } else if (imgurAlbumRegexp.test(url)) {
         console.log("Imgur album page detected");
+        output.saveByDefault = false;
 
         var titleEle = document.querySelector("h1.post-title");
         var matches = imgurAlbumRegexp.exec(url);
@@ -588,6 +587,7 @@ async function getPageMedia(callback)  {
         xmlhttp.send();
     } else if (imgurPostRegexp.test(url)) {
         console.log("Imgur post page detected");
+        output.saveByDefault = false;
 
         var titleEle = document.querySelector("h1.post-title");
         if (titleEle != null) {
@@ -608,6 +608,37 @@ async function getPageMedia(callback)  {
                 output.addLink(createLink(link, "image"));
             }
         }
+    } else if (postimgAlbumRegexp.test(url)) {
+        console.log("postimg album page detected");
+        output.saveByDefault = false;
+
+        var matches = postimgAlbumRegexp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
+
+        await triggerAutoLoad();
+
+        var eles = document.querySelectorAll("div.thumb a");
+        for (var i = 0; i < eles.length; i++) {
+            var link = eles[i].href;
+            if(postimgPostRegexp.test(link)) {
+                output.addLink(createLink(link, "page"));
+            }
+        }
+    } else if (postimgPostRegexp.test(url)) {
+        console.log("postimg post page detected");
+        output.saveByDefault = false;
+
+        var matches = postimgPostRegexp.exec(url);
+        output.artist = matches[1];
+        console.log("Artist: " + output.artist);
+
+        var ele = document.querySelector("img#main-image");
+        if(ele!=null) {
+            var link = ele.src;
+            output.addLink(createLink(link, "image"));
+        }
+
     } else if (document.querySelector("#cpg_main_block_outer") != null) {
         console.log("Coppermine site detected");
         output.artist = siteRegexp.exec(url)[1];
@@ -734,6 +765,7 @@ async function getPageMedia(callback)  {
         }
     } else if (gfycatRegexp.test(url)) {
         console.log("Gfycat page detected");
+        output.saveByDefault = false;
 
         output.artist = "gfycat";
         console.log("Artist: " + output.artist);
@@ -912,7 +944,7 @@ async function getPageMedia(callback)  {
 
         }
 
-        if(!otherSiteFound) {
+        if (!otherSiteFound) {
             output.error = "Site not recognized";
         }
     }
@@ -933,10 +965,10 @@ function getFileName(link) {
 }
 
 function createLink(url, type, filename, thumbnail, date) {
-    if(imgurPostRegexp.test(url)) {
+    if (imgurPostRegexp.test(url)) {
         // Mobile imgur links redirect, sow e need to filter them a bit
         var m = imgurPostRegexp.exec(url);
-        if(m[1]=="m.") {
+        if (m[1] == "m.") {
             url = url.replace("//m.imgur.", "//imgur.")
         }
     }
@@ -971,7 +1003,7 @@ chrome.runtime.onMessage.addListener(
             "from a content script:" + sender.tab.url :
             "from the extension");
         if (request.command == "getPageMedia"
-            &&request.url==window.location.href) {
+            && request.url == window.location.href) {
             getPageMedia(function (result) {
                 if (result.artist != null) {
                     result.artist = result.artist.toLowerCase();
@@ -1024,16 +1056,27 @@ function getTumblrImages(documentRoot) {
     return output;
 }
 
+async function triggerAutoLoad() {
+    var prevHeight = 0;
+    await sleep(500);
+    while (prevHeight != document.body.scrollHeight) {
+        window.scrollTo(0, document.body.scrollHeight);
+        prevHeight = document.body.scrollHeight;
+        await sleep(750);
+    }
+    window.scrollTo(0, document.body.scrollHeight);
+}
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function waitToLoad() {
-    var output = new Promise(function(resolve, reject) {
-            document.addEventListener('DOMContentLoaded', function(e) {
-                e.target.removeEventListener(e.type, arguments.callee);
-                resolve();
-            });
+    var output = new Promise(function (resolve, reject) {
+        document.addEventListener('DOMContentLoaded', function (e) {
+            e.target.removeEventListener(e.type, arguments.callee);
+            resolve();
+        });
     });
     return output;
 }

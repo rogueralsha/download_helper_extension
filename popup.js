@@ -69,6 +69,8 @@ function getDetectedMedia() {
             }else if(response.links.length==0) {
                 setMessage("No media found");
             } else {
+
+
                 for (var i = 0, len = response.links.length; i < len; i++) {
                     var link = response.links[i];
                     var row = document.createElement("tr");
@@ -145,6 +147,8 @@ function getDetectedMedia() {
                 artistEle.style.display = "inline-block";
                 openBtnEle.style.display = "inline-block";
                 cutoffDateEle.style.display = "inline-block";
+
+                document.getElementById("save-download-path-check").checked = response.saveByDefault;
 
                 if(response.page_title!=null) {
                     document.getElementById("artist-name-span").innerText = response.page_title + " (" + response.artist + ") (" + response.links.length + ")";
