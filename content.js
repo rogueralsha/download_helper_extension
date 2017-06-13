@@ -44,8 +44,12 @@ var flickrSizesRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([
 var gfycatRegexp = new RegExp("https?:\\/\\/gfycat\.com\\/([^\\/]+)$", 'i');
 var mixtapeRegexp = new RegExp("https?:\\/\\/my\.mixtape\.moe\\/([^\\/]+)$", 'i');
 var eroshareRegexp = new RegExp("https?:\\/\\/eroshare\.com\\/([^\\/]+)$", 'i');
+var pimpandhostRegexp = new RegExp("https?:\\/\\/pimpandhost\\.com\\/image\\/(\\d+)$", 'i');
+var imagebamRegexp = new RegExp("https?:\\/\\/www\\.imagebam\\.com\\/image\\/([\\da-f]+)$", 'i');
 var siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 
+
+//http://pimpandhost.com/image/15692563
 //http://t.umblr.com/redirect?z=https%3A%2F%2Fmy.mixtape.moe%2Fjuiydn.png&t=YmMzMWMzNTQzOTNlMjkxZGFlZjE1MGIxZTQ2MzNmYmRjOGM0NjQ5ZixVUFFnUXI0SA%3D%3D&b=t%3AOq704QYOd310j2BA8Z3cQg&p=http%3A%2F%2Fcolonelyobo.tumblr.com%2Fpost%2F160042170354%2Fnom-full-size-hey-with-all-the-running-she-does&m=1
 
 
@@ -73,7 +77,9 @@ function isSupportedPage(link) {
         eroshareRegexp.test(link) ||
         gfycatRegexp.test(link) ||
         postimgPostRegexp.test(link)||
-        postimgAlbumRegexp.test(link)) {
+        postimgAlbumRegexp.test(link)||
+        pimpandhostRegexp.test(link)||
+        imagebamRegexp.test(link)) {
         return true;
     }
     return false;
@@ -773,7 +779,7 @@ async function getPageMedia(callback) {
         var sourceEle = document.querySelector("source#webmSource");
         var link = sourceEle.src;
         console.log("Found URL: " + link);
-        output.addLink(createLink(link, "video", null, videoEle.poster));
+        output.addLink(createLink(link, "video"));
     } else if (eroshareRegexp.test(url)) {
         console.log("Eroshare page detected");
         var ele = document.querySelector(".user-link");
@@ -849,6 +855,7 @@ async function getPageMedia(callback) {
     } else if (eHentaiGalleryRegexp.test(url)) {
         console.log("e-Hentai gallery detected");
         output.artist = "e-Hentai";
+        output.saveByDefault = false;
         console.log("Artist: " + output.artist);
         var eles = document.querySelectorAll("div.gdtm a, div.gdtl a");
         for (var i = 0; i < eles.length; i++) {
@@ -863,6 +870,7 @@ async function getPageMedia(callback) {
     } else if (eHentaiImageRegexp.test(url)) {
         console.log("e-Hentai image detected");
         output.artist = "e-Hentai";
+        output.saveByDefault = false;
         console.log("Artist: " + output.artist);
 
         // Have to grab the file's name
@@ -876,6 +884,26 @@ async function getPageMedia(callback) {
         var ele = document.querySelector("div#i7 a");
         if (ele != null) {
             output.addLink(createLink(ele.href, "image", filename));
+        }
+    } else if (pimpandhostRegexp.test(url)) {
+        console.log("Pimp and host image detected");
+        output.artist = "pimpandhost";
+        output.saveByDefault = false;
+        console.log("Artist: " + output.artist);
+
+        var imgEle = document.querySelector("div#main-container img");
+        if (imgEle != null) {
+            output.addLink(createLink(imgEle.src, "image"));
+        }
+    } else if (imagebamRegexp.test(url)) {
+        console.log("Imagebam image detected");
+        output.artist = "iamgebam";
+        output.saveByDefault = false;
+        console.log("Artist: " + output.artist);
+
+        var imgEle = document.querySelector("div.container-full img");
+        if (imgEle != null) {
+            output.addLink(createLink(imgEle.src, "image"));
         }
     }
 
