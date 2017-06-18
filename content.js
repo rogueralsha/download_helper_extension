@@ -1,4 +1,4 @@
-var deviantArtGalleryRegExp = new RegExp("https?://([^\\.]+)\\.deviantart\\.com/gallery/.*", 'i');
+ deviantArtGalleryRegExp = new RegExp("https?://([^\\.]+)\\.deviantart\\.com/gallery/.*", 'i');
 var deviantartGalleryItemSelector = "a.torpedo-thumb-link";
 
 
@@ -40,6 +40,9 @@ var newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folde
 var flickrRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([^\\/]+)\\/.*$", 'i');
 var flickrImageRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([^\\/]+)\\/(\\d+)\\/.*$", 'i');
 var flickrSizesRegexp = new RegExp("^https?:\\/\\/www\.flickr\.com\\/photos\\/([^\\/]+)\\/(\\d+)\\/sizes\\/([^\\/]+)\\/$", 'i');
+
+var pixivSiteRegexp = new RegExp("https?://www\\.pixiv\\.net/", 'i');
+var pixivImgRegexp = new RegExp("https?://i\\.pximg\\.net/.+", 'i');
 
 var gfycatRegexp = new RegExp("https?:\\/\\/gfycat\.com\\/([^\\/]+)$", 'i');
 var mixtapeRegexp = new RegExp("https?:\\/\\/my\.mixtape\.moe\\/([^\\/]+)$", 'i');
@@ -449,7 +452,7 @@ async function getPageMedia(callback) {
     } else if (patreonPostRegExp.test(url)) {
         console.log("Patreon post detected");
 
-        var ele = document.querySelector("a[class*='components-CreatorCard--creatorCard']");
+        var ele = document.querySelector("a.dsTGcu");
         var pieces = ele.href.split("/");
         output.artist = pieces[pieces.length - 1];
         console.log("Artist: " + output.artist);
@@ -905,6 +908,8 @@ async function getPageMedia(callback) {
         if (imgEle != null) {
             output.addLink(createLink(imgEle.src, "image"));
         }
+    } else if(pixivSiteRegexp.test(url)||pixivImgRegexp.test(url)) {
+        processPixiv(url, output);
     }
 
     else {
@@ -952,7 +957,7 @@ async function getPageMedia(callback) {
             }
         }
 
-        // check for wp gallery
+        // check for wp gallery types
         var eles = document.querySelectorAll(".ngg-galleryoverview  div.ngg-gallery-thumbnail-box");
         if (eles.length > 0) {
             otherSiteFound = true;
@@ -972,10 +977,54 @@ async function getPageMedia(callback) {
 
         }
 
+        eles = document.querySelectorAll("div.tiled-gallery img");
+        if (eles.length > 0) {
+            otherSiteFound = true;
+            output.artist = siteRegexp.exec(url)[1];
+            for (var i = 0; i < eles.length; i++) {
+                var imgEle = eles[i];
+                var link = imgEle.dataset.origFile;
+                if(link==undefined) {
+                    console.log("Undefined link!");
+                    continue;
+                }
+
+                output.addLink(createLink(link, "file", null, imgEle.src));
+            }
+
+        }
+
+        eles = document.querySelectorAll("article.format-gallery img, figure.gallery-item img");
+        if (eles.length > 0) {
+            otherSiteFound = true;
+            output.artist = siteRegexp.exec(url)[1];
+            for (var i = 0; i < eles.length; i++) {
+                var imgEle = eles[i];
+                var link = imgEle.dataset.largeFile;
+                if(link==undefined) {
+                    console.log("Undefined link!");
+                    continue;
+                }
+
+                output.addLink(createLink(link.split("?")[0], "file", null, imgEle.src));
+            }
+
+        }
+
+        var ele = document.querySelector("body img:first-child");
+        if(ele!=null) {
+            // This should catch images that have been opened in chrome
+            output.artist = siteRegexp.exec(url)[1];
+            output.addLink(createLink(ele.src, "file"));
+            otherSiteFound = true;
+        }
+
+
         if (!otherSiteFound) {
             output.error = "Site not recognized";
         }
     }
+
     if (!async) {
         callback(output);
     }
