@@ -386,7 +386,7 @@ async function getPageMedia(callback) {
         output.artist = ele.innerText;
         console.log("Artist: " + output.artist);
 
-        var elements = document.querySelectorAll("div._myci9 a._8mlbc ");
+        var elements = document.querySelectorAll("div._myci9 div._8mlbc a");
         if (elements == null || elements.length == 0) {
             output.error = "No media found";
         }
@@ -399,7 +399,11 @@ async function getPageMedia(callback) {
                 link = link.split("?")[0];
                 console.log("Found URL: " + link);
                 var imgEle = ele.querySelector("img");
-                output.addLink(createLink(link, "page", null, imgEle.src));
+                if(imgEle!=null) {
+                    output.addLink(createLink(link, "page", null, imgEle.src));
+                } else {
+                    output.addLink(createLink(link, "page"));
+                }
             }
         }
 
@@ -452,7 +456,7 @@ async function getPageMedia(callback) {
     } else if (patreonPostRegExp.test(url)) {
         console.log("Patreon post detected");
 
-        var ele = document.querySelector("a.dsTGcu");
+        var ele = document.querySelector("a[data-reactid=\".0.1.0.0.0.0.1.0.0\"]");
         var pieces = ele.href.split("/");
         output.artist = pieces[pieces.length - 1];
         console.log("Artist: " + output.artist);
@@ -486,6 +490,16 @@ async function getPageMedia(callback) {
         var matches = patreonPostsRegExp.exec(url);
         output.artist = matches[1];
         console.log("Artist: " + output.artist);
+
+        window.scrollTo(0, document.body.scrollHeight);
+        var loadMoreButton = document.querySelector("button[data-reactid=\".0.1.0.0.2.0.0.0.1.0.0.2.0\"]");
+        while(loadMoreButton!=null) {
+            loadMoreButton.click();
+            await sleep(2000);
+            window.scrollTo(0, document.body.scrollHeight);
+            loadMoreButton = document.querySelector("button[data-reactid=\".0.1.0.0.2.0.0.0.1.0.0.2.0\"]");
+        }
+        window.scrollTo(0, document.body.scrollHeight);
 
         var elements = document.querySelectorAll("a")
         for (i = 0; i < elements.length; i++) {
@@ -1111,6 +1125,9 @@ function getTumblrImages(documentRoot) {
                     continue;
                 }
 
+                if (link.indexOf("_100.") > -1) {
+                    link = link.replace("_100", "_1280");
+                }
                 if (link.indexOf("_500.") > -1) {
                     link = link.replace("_500", "_1280");
                 }
@@ -1123,6 +1140,11 @@ function getTumblrImages(documentRoot) {
                 if (link.indexOf("_400.") > -1) {
                     link = link.replace("_400", "_1280");
                 }
+                }
+                console.log("Found URL: " + link);
+                output.push(createLink(link, "image"));
+            if (link.indexOf("_1280.") > -1) {
+                link = link.replace("_1280", "_raw");
                 console.log("Found URL: " + link);
                 output.push(createLink(link, "image"));
             }

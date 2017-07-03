@@ -198,10 +198,10 @@ async function openMedia() {
 
     progressStatus.max = openList.length;
 
-    openHelper(openList,progressStatus);
+    await openHelper(openList,progressStatus);
 }
 
-function openHelper(openList, progress) {
+async function openHelper(openList, progress) {
     if(openList.length==0) {
         return;
     }
@@ -215,14 +215,22 @@ function openHelper(openList, progress) {
         return;
     }
 
+
+
     if(delayCheck.checked) {
-        openNewBackgroundTab(link, function(tab) {
+        if(link.includes("paheal")) {
+            await sleep(1000);
+        }
+
+
+        openNewBackgroundTab(link, function(tab)  {
             if(progress!=null)
                 progress.sendUpdate();
 
             openHelper(openList, progress);
         });
     } else {
+
         openNewBackgroundTab(link, function(tab) {
             if(progress!=null)
                 progress.sendUpdate();
@@ -236,6 +244,8 @@ function openHelper(openList, progress) {
     //}
 
 }
+
+
 
 function downloadMedia(pageMedia, callback) {
     if(pageMedia==null||pageMedia.error!=null)
