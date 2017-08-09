@@ -14,7 +14,22 @@
       "matches": ["http://*/*",
         "https://*/*"
       ],
-      "js": ["download.js","settings.js","sites/pixiv.js","content.js"],
+      "js": ["download.js","settings.js",
+        "shared.js",
+        "sites/alsscan.js",
+        "sites/deviantart.js",
+        "sites/ehentai.js",
+        "sites/flickr.js",
+        "sites/hentaifoundry.js",
+        "sites/imgur.js",
+        "sites/metart.js",
+        "sites/minitokyo.js",
+        "sites/patreon.js",
+        "sites/pixiv.js",
+        "sites/postimg.js",
+        "sites/shimmie.js",
+        "sites/tumblr.js",
+        "content.js"],
       "all_frames": true
     }
   ],
