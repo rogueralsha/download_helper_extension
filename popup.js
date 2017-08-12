@@ -325,7 +325,7 @@ function ProgressStatus() {
 
 function autoPath() {
     var ele = document.getElementById("download-path-input");
-    ele.value = "import/artwork/" + pageMedia.artist;
+    ele.value = "import/artist;/" + pageMedia.artist;
 }
 
 document.getElementById('auto-button').onclick = autoPath;

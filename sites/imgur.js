@@ -1,4 +1,4 @@
-let imgurAlbumRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/a\\/([^\\/]+)", 'i');
+let imgurAlbumRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/(a|gallery)\\/([^\\/]+)", 'i');
 let imgurPostRegexp = new RegExp("https?:\\/\\/(m\\.)?imgur\\.com\\/([^\\/]+)$", 'i');
 
 function isImgurSite(url) {
@@ -13,7 +13,7 @@ async function processImgur(url, output) {
 
             let titleEle = document.querySelector("h1.post-title");
             let matches = imgurAlbumRegexp.exec(url);
-            let albumHash = matches[2];
+            let albumHash = matches[3];
             if (titleEle != null) {
                 output.artist = titleEle.innerText;
             } else {
@@ -25,8 +25,8 @@ async function processImgur(url, output) {
             let xmlhttp = new XMLHttpRequest();
 
             xmlhttp.onreadystatechange = function () {
-                if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-                    if (xmlhttp.status == 200) {
+                if (xmlhttp.readyState === XMLHttpRequest.DONE) {
+                    if (xmlhttp.status === 200) {
                         let json = xmlhttp.responseText;
                         let images = JSON.parse(json);
                         images = images.data.images;

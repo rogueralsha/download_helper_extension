@@ -1,8 +1,5 @@
 let artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 'i');
 
-let instagramRegExp = new RegExp("https?://www\\.instagram\\.com/p/.*", 'i');
-let instagramUserRegExp = new RegExp("https?://www\\.instagram\\.com/([^/]+)/", 'i');
-
 let twitterRegExp = new RegExp("https?://twitter\\.com/([^/]+)/?", 'i');
 let twitterPostRegExp = new RegExp("https?://twitter\\.com/([^/]+)/status/.+", 'i');
 
@@ -43,10 +40,10 @@ function isSupportedPage(link) {
         twitterPostRegExp.test(link) ||
         //patreonPostRegExp.test(link) ||
         hfRegExp.test(link) ||
-        instagramRegExp.test(link) ||
+        instagramSource.regExp.test(link) ||
         tumblrRegExp.test(link) ||
         artStationRegExp.test(link) ||
-        deviantArtRegExp.test(link) ||
+        deviantartSource.regExp.test(link) ||
         flickrRegexp.test(link) ||
         eroshareRegexp.test(link) ||
         gfycatRegexp.test(link) ||
@@ -124,13 +121,13 @@ function downloadHelperPageInit() {
     }
 
     let url = window.location.href;
-    if (isDeviantArtSite(url)) {
-        monitorDeviantArt();
-    }
+    deviantartSource.monitor(url);
 }
 
 
 window.onload = downloadHelperPageInit;
+
+let sources = [deviantartSource, instagramSource, miniTokyoSource];
 
 async function getPageMedia() {
         let url = window.location.href;
@@ -151,12 +148,16 @@ async function getPageMedia() {
 
         let metaAppName = document.querySelector('meta[property="al:android:app_name"]');
 
-        let result = await miniTokyoSource.process(url, outputData);
+        let result;
+        for (let i = 0; i < sources.length; i++) {
+            let source = sources[i];
+            result = await source.process(url, outputData);
+            if(result)
+                break;
+        }
 
         if (!result) {
-            if (isDeviantArtSite(url)) {
-                processDeviantArt(url, outputData);
-            } else if (artStationRegExp.test(url)) {
+            if (artStationRegExp.test(url)) {
                 let ele = document.querySelector("div.artist-name-and-headline div.name a");
                 outputData.artist = ele.href.substring(ele.href.lastIndexOf('/') + 1);
                 console.log("Artist: " + outputData.artist);
@@ -179,66 +180,6 @@ async function getPageMedia() {
                 }
             } else if (isTumblrSite(url, metaAppName)) {
                 await processTumblr(url, outputData);
-            } else if (instagramRegExp.test(url)) {
-                console.log("Instagram page detected")
-                let ele = document.querySelector("header a._4zhc5");
-                outputData.artist = ele.innerText;
-                console.log("Artist: " + outputData.artist);
-
-                let elements = document.querySelectorAll("img._icyx7, video");
-                if (elements == null || elements.length == 0) {
-                    outputData.error = "No media found";
-                }
-                for (i = 0; i < elements.length; i++) {
-                    ele = elements[i];
-                    if (ele == null) {
-                        outputData.error = "No media found";
-                    } else {
-                        let link = ele.src;
-                        console.log("Found URL: " + link);
-                        if (ele.nodeName.toLowerCase() == "video") {
-                            outputData.addLink(createLink(link, "video", null, ele.poster));
-                        } else {
-                            outputData.addLink(createLink(link, "image"));
-                        }
-                    }
-                }
-            } else if (instagramUserRegExp.test(url)) {
-                console.log("Instagram user page detected")
-
-                let ele = document.querySelector("a._8imhp");
-                if (ele != null) {
-                    ele.click();
-                    await triggerAutoLoad();
-                }
-
-
-                ele = document.querySelector("h1._i572c ");
-                outputData.artist = ele.innerText;
-                console.log("Artist: " + outputData.artist);
-
-                let elements = document.querySelectorAll("div._myci9 div._8mlbc a");
-                if (elements == null || elements.length == 0) {
-                    outputData.error = "No media found";
-                }
-                for (i = 0; i < elements.length; i++) {
-                    ele = elements[i];
-                    if (ele == null) {
-                        outputData.error = "No media found";
-                    } else {
-                        let link = ele.href;
-                        link = link.split("?")[0];
-                        console.log("Found URL: " + link);
-                        let imgEle = ele.querySelector("img");
-                        if (imgEle != null) {
-                            outputData.addLink(createLink(link, "page", null, imgEle.src));
-                        } else {
-                            outputData.addLink(createLink(link, "page"));
-                        }
-                    }
-                }
-
-
             } else if (isHentaiFoundrySite(url)) {
                 processHentaiFoundry(url, outputData);
             } else if (isPatreonSite(url)) {
