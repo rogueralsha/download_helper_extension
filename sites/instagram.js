@@ -3,6 +3,17 @@ let instagramSource = {
     regExp: new RegExp("https?://www\\.instagram\\.com/p/.*", 'i'),
     userRegExp: new RegExp("https?://www\\.instagram\\.com/([^/]+)/", 'i'),
 
+    handleLoadMoreButton: function() {
+        let eles = document.querySelectorAll("main article div a");
+        for(let i = 0; i< eles.length; i++) {
+            let ele = eles[i];
+            if(ele.innerText==="Load more") {
+                ele.click();
+                return true;
+            }
+        }
+        return false;
+    },
     process: async function (url, outputData) {
         let result = false;
         if (this.regExp.test(url)) {
@@ -35,35 +46,31 @@ let instagramSource = {
             result = true;
             console.log("Instagram user page detected")
 
-            let ele = document.querySelector("a._8imhp");
-            if (ele != null) {
-                ele.click();
+            if (this.handleLoadMoreButton()) {
                 await triggerAutoLoad();
             }
 
 
-            ele = document.querySelector("h1._i572c ");
+            let ele = document.querySelector("span section main article header div div h1");
             outputData.artist = ele.innerText;
             console.log("Artist: " + outputData.artist);
 
-            let elements = document.querySelectorAll("div._myci9 div._8mlbc a");
+            let elements = document.querySelectorAll("span section main article div div div div a");
             if (elements == null || elements.length == 0) {
                 outputData.error = "No media found";
             }
             for (i = 0; i < elements.length; i++) {
                 ele = elements[i];
-                if (ele == null) {
-                    outputData.error = "No media found";
+                let link = ele.href;
+                link = link.split("?")[0];
+                if(!this.regExp.test(link))
+                    continue;
+                console.log("Found URL: " + link);
+                let imgEle = ele.querySelector("img");
+                if (imgEle != null) {
+                    outputData.addLink(createLink(link, "page", null, imgEle.src));
                 } else {
-                    let link = ele.href;
-                    link = link.split("?")[0];
-                    console.log("Found URL: " + link);
-                    let imgEle = ele.querySelector("img");
-                    if (imgEle != null) {
-                        outputData.addLink(createLink(link, "page", null, imgEle.src));
-                    } else {
-                        outputData.addLink(createLink(link, "page"));
-                    }
+                    outputData.addLink(createLink(link, "page"));
                 }
             }
 

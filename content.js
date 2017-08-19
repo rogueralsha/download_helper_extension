@@ -60,18 +60,20 @@ function isSupportedPage(link) {
 let cachedLinks = [];
 let imgEles = [];
 
-async function downloadItem(link, callback) {
-    let result = await getPageMedia();
-        let src = event.srcElement.src;
+function downloadItem(link) {
+    let output = new Promise(async function (resolve, reject) {
+        let result = await getPageMedia();
         if (result.error == null) {
             result.links = [];
             result.addLink(createLink(link, "image"));
             chrome.runtime.sendMessage({command: "download", results: result}, function (response) {
-                if (callback != null) {
-                    callback();
-                }
+                resolve();
             });
+        } else {
+            resolve();
         }
+    });
+    return output;
 }
 
 function downloadHelperPageInit() {
@@ -89,11 +91,9 @@ function downloadHelperPageInit() {
     btnEle = document.createElement("input");
     btnEle.type = "button";
     btnEle.value = "Download & Close";
-    btnEle.onclick = function (event) {
-        downloadItem(toolbarEle.dataset["link"], function () {
-            chrome.runtime.sendMessage({command: "closeTab"}, function () {
-            });
-        });
+    btnEle.onclick = async function (event) {
+        await downloadItem(toolbarEle.dataset["link"]);
+        chrome.runtime.sendMessage({command: "closeTab"}, function () {});
     };
     toolbarEle.appendChild(btnEle);
 
