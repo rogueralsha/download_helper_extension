@@ -26,9 +26,9 @@
             width: 100%;
         }
     </style>
+    <script src="shared.js"></script>
     <script src="settings.js"></script>
     <script src="download.js"></script>
-    <script src="content.js"></script>
 
     <!--
       - JavaScript and HTML must be in separate files: see our Content Security
@@ -38,22 +38,6 @@
      -->
 </head>
 <body>
-<div style="text-align:right;">
-    <div id="artist-name-div"><span id="artist-name-span"></span></div>
-    <div id="progress-div"></div>
-    <div style="float:right; white-space: nowrap;">
-        <input type="button" id="refresh-button" value="Refresh"/>
-        <input type="button" id="auto-button" value="Auto"/>
-        <input type="button" id="open-button" style="display:none;" value="Open"/>
-        <input type="button" id="download-button" style="display:none;" value="Download"/>
-        <input type="button" id="download-close-button" style="display:none;" value="Download & Close"/>
-        <input type="checkbox" id="delay-check" checked />Delay
-    </div>
-    <input type="text" id="download-path-input" style="display: none;width:90%;" value=""/><label><input type="checkbox" id="save-download-path-check" checked />Save</label>
-    <input type="date" id="date-cutoff-input" style="display: none;width:100%;" value=""/>
-</div>
-<div id="message_output">Loading...</div>
-<div id="output"></div>
 <script src="popup.js"></script>
 </body>
 </html>

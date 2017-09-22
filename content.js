@@ -1,10 +1,5 @@
-let artStationRegExp = new RegExp("https?://www\\.artstation\\.com/artwork/.*", 'i');
-
 let twitterRegExp = new RegExp("https?://twitter\\.com/([^/]+)/?", 'i');
 let twitterPostRegExp = new RegExp("https?://twitter\\.com/([^/]+)/status/.+", 'i');
-
-let redditRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)\\/.+", 'i');
-let redditPostRegexp = new RegExp("https?://www\\.reddit\\.com/r/([^\\/]+)/comments/.+", 'i');
 
 let newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folder)\\/(.+)", 'i');
 
@@ -24,7 +19,7 @@ let siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 //http://t.umblr.com/redirect?z=https%3A%2F%2Fmy.mixtape.moe%2Fjuiydn.png&t=YmMzMWMzNTQzOTNlMjkxZGFlZjE1MGIxZTQ2MzNmYmRjOGM0NjQ5ZixVUFFnUXI0SA%3D%3D&b=t%3AOq704QYOd310j2BA8Z3cQg&p=http%3A%2F%2Fcolonelyobo.tumblr.com%2Fpost%2F160042170354%2Fnom-full-size-hey-with-all-the-running-she-does&m=1
 
 
-let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)")
+let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)");
 
 function evaluateLink(link, output, filename) {
     if (isSupportedPage(link)) {
@@ -42,14 +37,14 @@ function isSupportedPage(link) {
         hfRegExp.test(link) ||
         instagramSource.regExp.test(link) ||
         tumblrRegExp.test(link) ||
-        artStationRegExp.test(link) ||
+        artstationSource.regExp.test(link) ||
         deviantartSource.regExp.test(link) ||
         flickrRegexp.test(link) ||
         eroshareRegexp.test(link) ||
         gfycatRegexp.test(link) ||
-        postimgPostRegexp.test(link)||
-        postimgAlbumRegexp.test(link)||
-        pimpandhostRegexp.test(link)||
+        postimgPostRegexp.test(link) ||
+        postimgAlbumRegexp.test(link) ||
+        pimpandhostRegexp.test(link) ||
         imagebamRegexp.test(link)) {
         return true;
     }
@@ -61,20 +56,28 @@ let cachedLinks = [];
 let imgEles = [];
 
 function downloadItem(link) {
-    let output = new Promise(async function (resolve, reject) {
+    return new Promise(async function (resolve, reject) {
+        console.log("Performing manual item download");
         let result = await getPageMedia();
         if (result.error == null) {
             result.links = [];
+            let downloadPath = await getMapping(result.artist);
+            if (isNullOrEmpty(downloadPath) && !window.confirm("Download without path?")) {
+                resolve();
+                return;
+            }
             result.addLink(createLink(link, "image"));
             chrome.runtime.sendMessage({command: "download", results: result}, function (response) {
                 resolve();
             });
         } else {
+            console.log(result.error);
             resolve();
         }
     });
-    return output;
 }
+
+let inPageOutputElement;
 
 function downloadHelperPageInit() {
     let toolbarEle = document.createElement("div");
@@ -93,7 +96,8 @@ function downloadHelperPageInit() {
     btnEle.value = "Download & Close";
     btnEle.onclick = async function (event) {
         await downloadItem(toolbarEle.dataset["link"]);
-        chrome.runtime.sendMessage({command: "closeTab"}, function () {});
+        chrome.runtime.sendMessage({command: "closeTab"}, function () {
+        });
     };
     toolbarEle.appendChild(btnEle);
 
@@ -109,6 +113,12 @@ function downloadHelperPageInit() {
                 downloadItem(imgEle.src);
             });
             imgEle.addEventListener("mouseover", function (event) {
+                let url = window.location.href;
+                if(!(isHentaiFoundrySite(url)||
+                    isShimmieSite())) {
+                    return;
+                }
+
                 let rect = event.srcElement.getBoundingClientRect();
                 let y = rect.top;
                 let x = rect.left;
@@ -120,27 +130,67 @@ function downloadHelperPageInit() {
         }
     }
 
-    let url = window.location.href;
-    deviantartSource.monitor(url);
+    if(!inIframe()) {
+        let url = window.location.href;
+        deviantartSource.monitor(url);
+
+        inPageOutputElement = document.createElement("div");
+        inPageOutputElement.style.position = "fixed";
+        inPageOutputElement.style.right = "4pt";
+        inPageOutputElement.style.top = "4pt";
+        inPageOutputElement.style.padding = "4pt";
+        inPageOutputElement.style.maxHeight= window.innerHeight + "px";
+        inPageOutputElement.style.overflowY = "auto";
+        inPageOutputElement.style.backgroundColor = "rgba(255,255,255,0.8)";
+        inPageOutputElement.style.border = "solid 1px black";
+        inPageOutputElement.style.zIndex = 2147483647;
+
+        document.body.appendChild(inPageOutputElement);
+
+        refreshInPageOutput();
+
+        window.onfocus = function() {
+            "use strict";
+            refreshInPageOutput();
+        }
+    }
 }
 
+async function refreshInPageOutput() {
+    inPageOutputElement.innerHTML = "";
+    let data = await getPageMedia();
+    buildOutputScreen(inPageOutputElement, data, refreshInPageOutput);
+}
 
 window.onload = downloadHelperPageInit;
 
-let sources = [deviantartSource, instagramSource, miniTokyoSource];
+let sources = [artstationSource, deviantartSource, instagramSource, miniTokyoSource, redditSource];
 
 async function getPageMedia() {
-        let url = window.location.href;
-        let outputData = {};
+    let url = window.location.href;
+    let outputData = {};
     try {
         outputData.links = [];
         outputData.action = "download";
         outputData.error = null;
         outputData.saveByDefault = true;
         outputData.addLink = function (link) {
+            let parser = document.createElement('a');
+            parser.href = link.url;
+
             for (let i = 0; i < this.links.length; i++) {
                 if (this.links[i].url == link.url) {
                     return;
+                } else {
+                    let parser2 = document.createElement("a");
+                    parser2.href = this.links[i].url;
+                    if (parser.protocol != parser2.protocol) {
+                        console.log("Mismatching protocols");
+                        parser.protocol = parser2.protocol;
+                        if (parser.href == parser2.href) {
+                            return;
+                        }
+                    }
                 }
             }
             this.links.push(link);
@@ -152,33 +202,12 @@ async function getPageMedia() {
         for (let i = 0; i < sources.length; i++) {
             let source = sources[i];
             result = await source.process(url, outputData);
-            if(result)
+            if (result)
                 break;
         }
 
         if (!result) {
-            if (artStationRegExp.test(url)) {
-                let ele = document.querySelector("div.artist-name-and-headline div.name a");
-                outputData.artist = ele.href.substring(ele.href.lastIndexOf('/') + 1);
-                console.log("Artist: " + outputData.artist);
-
-                let elements = document.querySelectorAll("div.asset-actions a");
-                if (elements == null || elements.length == 0) {
-                    outputData.error = "No media found";
-                }
-                for (let i = 0; i < elements.length; i++) {
-                    ele = elements[i];
-                    if (ele == null) {
-                        outputData.error = "No media found";
-                    } else {
-                        let link = ele.href;
-                        if (link.indexOf("&dl=1") > -1) {
-                            console.log("Found URL: " + link);
-                            outputData.addLink(createLink(link, "image"));
-                        }
-                    }
-                }
-            } else if (isTumblrSite(url, metaAppName)) {
+            if (isTumblrSite(url, metaAppName)) {
                 await processTumblr(url, outputData);
             } else if (isHentaiFoundrySite(url)) {
                 processHentaiFoundry(url, outputData);
@@ -211,26 +240,6 @@ async function getPageMedia() {
                         let link = "https://twitter.com/" + outputData.artist + "/status/" + id;
                         console.log("Found URL: " + link);
                         outputData.addLink(createLink(link, "page", id));
-                    }
-                }
-            } else if (redditRegexp.test(url)) {
-                console.log("Reddit page detected");
-                let matches = redditRegexp.exec(url);
-                outputData.artist = matches[1];
-                console.log("Artist: " + outputData.artist);
-
-                let links = document.querySelectorAll("a.title");
-                if (links != null && links.length > 0) {
-                    for (let i = 0; i < links.length; i++) {
-                        let link = links[i].href;
-                        console.log("Found URL: " + link);
-                        if (redditPostRegexp.test(link)) {
-                            continue;
-                        } else if (isSupportedPage(link)) {
-                            outputData.addLink(createLink(link, "page"));
-                        } else {
-                            outputData.addLink(createLink(link, "image"));
-                        }
                     }
                 }
             } else if (isImgurSite(url)) {
@@ -286,7 +295,7 @@ async function getPageMedia() {
 
                 let itemEle = document.querySelector(".display_media");
                 if (itemEle != null) {
-                    let objEle = itemEle.querySelector("object param[name='src']")
+                    let objEle = itemEle.querySelector("object param[name='src']");
                     let imgEle = itemEle.querySelector("img");
                     let downEle = document.querySelector("a.button");
                     if (downEle != null) {
@@ -383,7 +392,7 @@ async function getPageMedia() {
                 console.log("Artist: " + outputData.artist);
                 let videoEles = document.querySelectorAll("video");
                 for (let j = 0; j < videoEles.length; j++) {
-                    let videoEle = videoEles[j]
+                    let videoEle = videoEles[j];
                     let link = videoEle.src;
                     console.log("Found URL: " + link);
                     outputData.addLink(createLink(link, "video", null, videoEle.poster));
@@ -414,14 +423,10 @@ async function getPageMedia() {
                 }
             } else if (pixivSiteRegexp.test(url) || pixivImgRegexp.test(url)) {
                 processPixiv(url, outputData);
-            }
-            else {
+            } else if (isShimmieSite()) {
+                processShimmie(url, outputData);
+            } else {
                 let otherSiteFound = false;
-                // Check if we're on a shimmie site
-                if (isShimmieSite()) {
-                    otherSiteFound = true;
-                    processShimmit(url, outputData);
-                }
 
                 // check for wp gallery types
                 let eles = document.querySelectorAll(".ngg-galleryoverview  div.ngg-gallery-thumbnail-box");
@@ -491,7 +496,7 @@ async function getPageMedia() {
                 }
             }
         }
-    } catch(err) {
+    } catch (err) {
         outputData.error = err.message;
         console.log(err);
     }
@@ -517,7 +522,7 @@ function createLink(url, type, filename, thumbnail, date) {
         }
     }
 
-    console.log("Creating " + type + " link: " + url)
+    console.log("Creating " + type + " link: " + url);
     let outputData = {};
     outputData["url"] = resolvePartialUrl(decodeURI(url));
     outputData["type"] = type;
@@ -548,14 +553,15 @@ chrome.runtime.onMessage.addListener(
             "from the extension");
         if (request.command == "getPageMedia"
             && request.url == window.location.href) {
-
             getPageMediaMessageListener(sendResponse);
             return true;
         }
-
+        return null;
     });
 
 async function getPageMediaMessageListener(sendResponse) {
+    let id = guidGenerator();
+    console.log("Getting media thread:" + id);
     let result = await getPageMedia();
 
     if (result.artist != null) {
@@ -563,9 +569,15 @@ async function getPageMediaMessageListener(sendResponse) {
     }
     console.log("Total media items found: " + result.links.length);
     sendResponse(result);
+    console.log("Response sent thread:" + id);
 }
 
-
+function guidGenerator() {
+    var S4 = function() {
+        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+    };
+    return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+}
 
 async function triggerAutoLoad() {
     let prevHeight = 0;
@@ -580,11 +592,10 @@ async function triggerAutoLoad() {
 
 
 function waitToLoad() {
-    let output = new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, reject) {
         document.addEventListener('DOMContentLoaded', function (e) {
             e.target.removeEventListener(e.type, arguments.callee);
             resolve();
         });
     });
-    return output;
 }

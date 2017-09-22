@@ -10,7 +10,6 @@ function isTumblrSite(url, metaAppName) {
 
 function processTumblr(url, output) {
     return new Promise(async function(resolve, reject) {
-        var async = false;
         console.log("Tumblr page detected");
         if (tumblrRegExp.test(url)) {
             output.artist = tumblrRegExp.exec(url)[1];
@@ -38,6 +37,7 @@ function processTumblr(url, output) {
                 let link = links[i].href + "/mobile";
                 output.addLink(createLink(link, "page"));
             }
+            resolve();
         } else if(tumblrPostRegExp.test(url)) {
             if(tumblrMobilePostRegExp.test(url)) {
                 // Mobile page - Same code should work, but we can easily detect if it's a reblog so we can skip it
@@ -47,15 +47,28 @@ function processTumblr(url, output) {
                 }
             }
 
+            output.links = getTumblrImages(document);
+
+            let linkEles = document.querySelectorAll("a");
+            for (let i = 0; i < linkEles.length; i++) {
+                let linkEle = linkEles[i];
+                if (tumblrRedirectRegExp.test(linkEle.href)) {
+                    let link = tumblrRedirectRegExp.exec(linkEle.href)[1];
+                    link = decodeURIComponent(link);
+                    evaluateLink(link, output);
+                }
+
+            }
+
             let iframes = document.querySelectorAll("iframe.photoset");
             if (iframes != null && iframes.length > 0) {
-
                 console.log("Found photoset iframes");
                 try {
                     let iframe = iframes[0];
+                    console.log("Getting media from iframe: " + iframe.src);
                     chrome.runtime.sendMessage({url: iframe.src, command: "getPageMedia"}, function (response) {
                         if (response == null) {
-                            console.log("No media found in iframe (null)");
+                            console.log("No media found in iframe (null): " + iframe.src);
                             resolve();
                             return;
                         }
@@ -71,29 +84,14 @@ function processTumblr(url, output) {
                         }
                         resolve();
                     });
-                    async = true;
                 } catch (err) {
                     console.log(err);
-
+                    reject(err);
                 }
+            } else {
+                resolve();
             }
 
-            output.links = getTumblrImages(document);
-
-
-            let linkEles = document.querySelectorAll("a");
-            for (let i = 0; i < linkEles.length; i++) {
-                let linkEle = linkEles[i];
-                if (tumblrRedirectRegExp.test(linkEle.href)) {
-                    let link = tumblrRedirectRegExp.exec(linkEle.href)[1];
-                    link = decodeURIComponent(link);
-                    evaluateLink(link, output);
-                }
-
-            }
-        }
-        if(!async) {
-            resolve();
         }
     });
 }
@@ -109,7 +107,6 @@ function getTumblrImages(documentRoot) {
             let ele = elements[i];
             if (ele == null) {
                 console.log("Null element in img list");
-                continue;
             } else {
                 let link = ele.src;
                 if (!tumblrMediaRegExp.test(link) || link.indexOf("avatar_") > -1) {

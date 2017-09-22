@@ -2,7 +2,7 @@ function isShimmieSite() {
     return document.querySelectorAll("div.shm-thumb").length>0||document.querySelector(".shm-main-image")!=null;
 }
 
-function processShimmit(url, output) {
+function processShimmie(url, output) {
     let eles = document.querySelectorAll("div.shm-thumb");
     if (eles.length > 0) {
         console.log("Shimmie site detected");

@@ -2,7 +2,7 @@ let alsscanRegexp = new RegExp("^https?://.+\\.alsscan\\.com/.*", 'i');
 let alsscanGalleryRegexp = new RegExp("^https?://.+\\.alsscan\\.com/.*model/([^\\/]+)/gallery/\\d+/", 'i');
 let alsscanGalleryImageRegexp = new RegExp("^https?://.+\\.alsscan\\.com/.*model/([^\\/]+)/gallery/\\d+/[^\\/]+/image/.+", 'i');
 
-let alsscanFileDownloadRegex = new RegExp("\\&n\\=([^&]+)&")
+let alsscanFileDownloadRegex = new RegExp("\\&n\\=([^&]+)&");
 
 function isAlsScanSite(url) {
     return alsscanRegexp.test(url);

@@ -1,142 +1,158 @@
-function downloadPageMedia(pageMedia, callback, progress) {
-    getMapping(pageMedia.artist, function(downloadPath) {
-       downloadPageMediaWithPath(pageMedia, downloadPath, callback, progress);
-    });
+async function downloadPageMedia(pageMedia, progress) {
+    let downloadPath = await getMapping(pageMedia.artist);
+    await downloadPageMediaWithPath(pageMedia, downloadPath, progress);
 }
 
-function downloadPageMediaWithPath(pageMedia, downloadPath, callback, progress){
-    if(pageMedia==null||pageMedia.error!=null)
+async function downloadPageMediaWithPath(pageMedia, downloadPath, progress) {
+    if (pageMedia == null || pageMedia.error != null)
         return;
 
-    getPrefixPath(function(prefixPath) {
-        if(prefixPath.length>0) {
-            downloadPath = trimPath(prefixPath) + "/" + trimPath(downloadPath);
-        }
+    let prefixPath = await getPrefixPath();
+    if (prefixPath.length > 0) {
+        downloadPath = trimPath(prefixPath) + "/" + trimPath(downloadPath);
+    }
 
-        if(progress!=null)
-            progress.max += pageMedia.links.length;
+    if (progress != null)
+        progress.max += pageMedia.links.length;
 
-        downloadHelper(downloadPath, pageMedia.links, function() {
-            if(callback!=null)
-                callback();
-        }, progress);
-
-    });
-
+    await downloadHelper(downloadPath, pageMedia.links, progress);
 }
 
+function getTab(tabId) {
+    return new Promise(async function(resolve, reject) {
+        "use strict";
+        chrome.runtime.sendMessage({tabId: tabId, command: "getTab"}, function (response) {
+            "use strict";
+            resolve(response);
+        });
 
-function downloadHelper(downloadPath, linkList, callback, progress) {
-    if(linkList.length>0) {
+    });
+}
 
-        var link = linkList.shift();
+function downloadHelper(downloadPath, linkList, progress) {
+    return new Promise(async function(resolve, reject) {
+        if (linkList.length > 0) {
 
-        if(link===undefined) {
-            window.alert("undefined link");
-            return;
-        }
+            let link = linkList.shift();
 
-        if(link["type"]=="page") {
-            openNewBackgroundTab(link["url"],function(tab) {
-                chrome.tabs.sendMessage(tab.id, {url: link["url"],command: "getPageMedia"}, function(response) {
-                    if (response == null||response.error!=null) {
+            if (link === undefined) {
+                window.alert("undefined link");
+                resolve();
+                return;
+            }
+
+            console.log("Downloading link");
+            console.log(link)
+
+            if (link["type"] === "page") {
+                let tab = await openNewBackgroundTab(link["url"]);
+                tab = await getTab(tab.id);
+                console.log("Sending getPageMedia message to tab: " + tab.url);
+                chrome.runtime.sendMessage({tabId: tab.id, url: tab.url, command: "getPageMedia"}, async function (response) {
+                    if (response == null || response.error != null) {
+                        resolve();
                         return;
                     }
-                    var childDownloadPath = downloadPath;
-                    if(response.page_title!=null) {
-                        var i = downloadPath.lastIndexOf(response.page_title);
-                        if(i==-1||i!=downloadPath.length-response.page_title.length) {
+                    let childDownloadPath = downloadPath;
+                    if (response.page_title != null) {
+                        let i = downloadPath.lastIndexOf(response.page_title);
+                        if (i === -1 || i !== downloadPath.length - response.page_title.length) {
                             childDownloadPath = trimPath(downloadPath) + "/" + trimPath(response.page_title);
                         }
                     }
 
-                    if(progress!=null&&response.links.length>1) {
-                        var childProgress = progress.createChild();
+                    let childProgress = null;
+                    if (progress != null && response.links.length > 1) {
+                        childProgress = progress.createChild();
                         childProgress.max = response.links.length;
                     }
-                    downloadHelper(childDownloadPath, response.links, function() {
-                        if(childProgress!=null)
-                            childProgress.complete();
-                        if(progress!=null)
-                            progress.sendUpdate();
-                        chrome.tabs.remove(tab.id);
-                        downloadHelper(downloadPath, linkList, callback, progress);
-                    }, childProgress);
+                    await downloadHelper(childDownloadPath, response.links, childProgress);
+
+                    if (childProgress != null)
+                        childProgress.complete();
+                    if (progress != null)
+                        progress.sendUpdate();
+                    console.log("Closing tab: " + tab.id);
+
+                    await closeTab(tab.id);
+                    await downloadHelper(downloadPath, linkList, progress);
+                    resolve();
                 });
-            })
+
+            } else {
+                let fileName = link["filename"];
+                if (downloadPath.length > 0) {
+                    fileName = trimPath(downloadPath) + "/" + trimPath(fileName);
+                }
+
+                console.log("Downloading with path: " + fileName);
+
+                let headers = [];
+
+                if (link["referer"] != null) {
+                    console.log("Link referer found, setting header: " + link["referer"]);
+                    headers["referer"] = link["referer"];
+                }
+
+                console.log("Beginning download of file: " + link["url"]);
+
+
+                chrome.runtime.sendMessage({url: link["url"], filename: fileName, headers: headers, command: "downloadLink"}, async function (response) {
+                    "use strict";
+                    if (progress != null)
+                        progress.sendUpdate();
+                    await downloadHelper(downloadPath, linkList, progress);
+                    resolve(response);
+                });
+            }
         } else {
-            var fileName = link["filename"];
-            if (downloadPath.length > 0) {
-                fileName = trimPath(downloadPath) + "/" + trimPath(fileName);
-            }
-
-            console.log("Downloading with path: " + fileName)
-
-            var headers = [];
-
-            if(link["referer"]!=null) {
-                headers["referer"] = link["referer"];
-            }
-
-            chrome.downloads.download({
-                url: link["url"],
-                filename: fileName, // Optional
-                conflictAction: "uniquify",
-                method: "GET",
-                headers: headers
-            }, function () {
-                if (progress != null)
-                    progress.sendUpdate();
-                downloadHelper(downloadPath, linkList, callback, progress);
-            });
-
+            resolve();
         }
-    } else {
-        callback();
-    }
+    });
 }
 
-function openNewBackgroundTab(link, callback){
-    var tab = chrome.tabs.create({url:link,active:false}, function (tab) {
-        chrome.tabs.onUpdated.addListener(function(tabId , info) {
-            if (tabId==tab.id&&info.status == "complete") {
-                if(callback!=null) {
-                    callback(tab);
-                }
-            }
+function openNewBackgroundTab(link, windowId) {
+    if(windowId==null) {
+
+    }
+    console.log("Opening background tab: " + link);
+    return new Promise(async function(resolve, reject) {
+        chrome.runtime.sendMessage({url: link, windowId: windowId, command: "openTab"}, function (response) {
+            "use strict";
+            console.log("Response received from background script opening tab");
+            console.log(response);
+            resolve(response);
         });
     });
 }
 
 function trimPath(input) {
-    var output = input;
+    let output = input;
 
 
-    if(output.indexOf("/")==0||output.indexOf("\\")==0) {
+    if (output.indexOf("/") === 0 || output.indexOf("\\") === 0) {
         output = output.substr(1);
     }
-    if(output.lastIndexOf("/")==output.length-1||
-        output.lastIndexOf("\\")==output.length-1) {
-        output = output.substr(0,output.length - 1);
+    if (output.lastIndexOf("/") === output.length - 1 ||
+        output.lastIndexOf("\\") === output.length - 1) {
+        output = output.substr(0, output.length - 1);
     }
     return output;
 }
 
 function getBase64Image(img) {
     // Create an empty canvas element
-    var canvas = document.createElement("canvas");
+    let canvas = document.createElement("canvas");
     canvas.width = img.width;
     canvas.height = img.height;
 
     // Copy the image contents to the canvas
-    var ctx = canvas.getContext("2d");
+    let ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
 
     // Get the data-URL formatted image
     // Firefox supports PNG and JPEG. You could check img.src to
     // guess the original format, but be aware the using "image/jpg"
     // will re-encode the image.
-    var dataURL = canvas.toDataURL("image/png");
-
-    return dataURL; //.replace(/^data:image\/(png|jpg);base64,/, "");
+    return canvas.toDataURL("image/png");
 }

@@ -17,6 +17,8 @@ let deviantartSource = {
             cachedLinks.push(eles[i].href);
         }
 
+
+
         let observer = new MutationObserver(function (mutations) {
             mutations.forEach(function (mutation) {
                 if (mutation.type != "childList" || mutation.addedNodes.length == 0) {
@@ -24,7 +26,7 @@ let deviantartSource = {
                 }
                 for (let j = 0; j < mutation.addedNodes.length; j++) {
                     let node = mutation.addedNodes[j];
-                    eles = document.querySelectorAll(this.galleryItemSelector);
+                    eles = document.querySelectorAll(deviantartSource.galleryItemSelector);
                     for (let k = 0; k < eles.length; k++) {
                         let link = eles[k].href;
                         if (!cachedLinks.includes(link)) {
@@ -101,7 +103,7 @@ let deviantartSource = {
                 output.addLink(createLink(link, "page"));
             }
         } else if(this.sandboxRegExp.test(url)) {
-            console.log("Deviantart sandbox")
+            console.log("Deviantart sandbox");
             result  = true;
             let ele = document.querySelector("embed#sandboxembed");
             if(ele!=null) {

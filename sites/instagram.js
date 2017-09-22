@@ -3,6 +3,8 @@ let instagramSource = {
     regExp: new RegExp("https?://www\\.instagram\\.com/p/.*", 'i'),
     userRegExp: new RegExp("https?://www\\.instagram\\.com/([^/]+)/", 'i'),
 
+    metaUserRegexp: new RegExp("\\(@([^\\)]+)\\)"),
+
     handleLoadMoreButton: function() {
         let eles = document.querySelectorAll("main article div a");
         for(let i = 0; i< eles.length; i++) {
@@ -18,45 +20,48 @@ let instagramSource = {
         let result = false;
         if (this.regExp.test(url)) {
             result = true;
-            console.log("Instagram page detected")
-            let ele = document.querySelector("header div a");
-            outputData.artist = ele.innerText;
+            console.log("Instagram page detected");
+
+            let ele = document.querySelector("meta[name=\"description\"]");
+            let description = ele.getAttribute("content");
+            outputData.artist =  this.metaUserRegexp.exec(description)[1];
+
             console.log("Artist: " + outputData.artist);
 
             let elements = document.querySelectorAll("section main div article div div div div img, video");
-            if (elements == null || elements.length == 0) {
+            if (elements == null || elements.length === 0) {
                 outputData.error = "No media found";
             }
-            for (i = 0; i < elements.length; i++) {
-                ele = elements[i];
+            //for (let i = 0; i < elements.length; i++) {
+                ele = elements[0];
                 if (ele == null) {
                     outputData.error = "No media found";
                 } else {
                     let link = ele.src;
                     console.log("Found URL: " + link);
-                    if (ele.nodeName.toLowerCase() == "video") {
+                    if (ele.nodeName.toLowerCase() === "video") {
                         outputData.addLink(createLink(link, "video", null, ele.poster));
                     } else {
                         outputData.addLink(createLink(link, "image"));
                     }
                 }
-                break;
-            }
+                //break;
+            //}
         } else if (this.userRegExp.test(url)) {
             result = true;
-            console.log("Instagram user page detected")
+            console.log("Instagram user page detected");
 
             if (this.handleLoadMoreButton()) {
                 await triggerAutoLoad();
             }
 
-
-            let ele = document.querySelector("span section main article header div div h1");
-            outputData.artist = ele.innerText;
+            let ele = document.querySelector("meta[property=\"og:title\"]");
+            let description = ele.getAttribute("content");
+            outputData.artist =  this.metaUserRegexp.exec(description)[1];
             console.log("Artist: " + outputData.artist);
 
             let elements = document.querySelectorAll("span section main article div div div div a");
-            if (elements == null || elements.length == 0) {
+            if (elements == null || elements.length === 0) {
                 outputData.error = "No media found";
             }
             for (i = 0; i < elements.length; i++) {
