@@ -28,13 +28,15 @@ async function processBackgroundMessage(request, sender, sendResponse) {
             sendResponse();
         } else {
             chrome.tabs.query({active: true, currentWindow: true}, function (tabs) {
-                chrome.tabs.remove(tabs[0].id);
+                chrome.tabs.remove(sender.tab.id);
                 sendResponse();
             });
         }
     } else if(request.command === "getTab") {
         chrome.tabs.query(
-            {currentWindow: true},
+            {
+                //currentWindow: true
+            },
             function (tabArray) {
                 for(let i = 0; i < tabArray.length;i++) {
                     let tab = tabArray[i];

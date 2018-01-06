@@ -1,4 +1,4 @@
-let inputs = [];
+let maappingInputs = [];
 let delete_checks = [];
 
 // Saves options to chrome.storage
@@ -6,8 +6,8 @@ async function save_options() {
     let obj = {};
 
 
-    for (i = 0; i < inputs.length; i++) {
-        let input = inputs[i];
+    for (i = 0; i < maappingInputs.length; i++) {
+        let input = maappingInputs[i];
 
         obj[input.name] = input.value;
     }
@@ -113,7 +113,7 @@ async function restore_options() {
         cell.appendChild(input);
         row.appendChild(cell);
         table.appendChild(row);
-        inputs.push(input);
+        maappingInputs.push(input);
     }
     space.appendChild(table);
 }

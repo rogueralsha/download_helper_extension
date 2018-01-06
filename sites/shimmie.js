@@ -4,6 +4,8 @@ function isShimmieSite() {
 
 function processShimmie(url, output) {
     let eles = document.querySelectorAll("div.shm-thumb");
+    output.saveByDefault = false;
+
     if (eles.length > 0) {
         console.log("Shimmie site detected");
         output.artist = siteRegexp.exec(url)[1];
@@ -13,14 +15,14 @@ function processShimmie(url, output) {
             let linkEle = ele.querySelector("a:nth-child(3)");
             let link = linkEle.href;
 
-            output.addLink(createLink(link, "file", null, imgEle.src));
+            output.addLink(createLinkLegacy(link, "file", null, imgEle.src));
         }
         eles = document.querySelectorAll("section#paginator a");
         if (eles != null) {
             for (let i = 0; i < eles.length; i++) {
                 let ele = eles[i];
                 if (ele.innerText == "Next") {
-                    output.addLink(createLink(ele.href, "page"));
+                    output.addLink(createLinkLegacy(ele.href, "page"));
                 }
             }
         }
@@ -33,11 +35,11 @@ function processShimmie(url, output) {
             let link = "";
             if (ele.tagName.toLowerCase() == "img") {
                 link = ele.src;
-                output.addLink(createLink(link, "image"));
+                output.addLink(createLinkLegacy(link, "image"));
             } else if (ele.tagName.toLowerCase() == "video") {
                 ele = ele.querySelector("source");
                 link = ele.src;
-                output.addLink(createLink(link, "video"));
+                output.addLink(createLinkLegacy(link, "video"));
             }
             console.log("Found URL: " + link);
         }

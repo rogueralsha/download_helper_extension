@@ -16,11 +16,11 @@ function processEhentai(url, output) {
         for (let i = 0; i < eles.length; i++) {
             let ele = eles[i];
             let imgEle = ele.querySelector("img");
-            output.addLink(createLink(ele.href, "page", null, imgEle.src));
+            output.addLink(createLinkLegacy(ele.href, "page", null, imgEle.src));
         }
         let nextEle = document.querySelector("div.gtb table.ptb td:last-child a");
         if (nextEle != null) {
-            output.addLink(createLink(nextEle.href, "page"));
+            output.addLink(createLinkLegacy(nextEle.href, "page"));
         }
     } else if (eHentaiImageRegexp.test(url)) {
         console.log("e-Hentai image detected");
@@ -38,11 +38,11 @@ function processEhentai(url, output) {
 
         let ele = document.querySelector("div#i7 a");
         if (ele != null) {
-            output.addLink(createLink(ele.href, "image", filename));
+            output.addLink(createLinkLegacy(ele.href, "image", filename));
         } else {
             ele = document.querySelector("img#img");
             if (ele != null) {
-                output.addLink(createLink(ele.src, "image", filename));
+                output.addLink(createLinkLegacy(ele.src, "image", filename));
             }
         }
     }

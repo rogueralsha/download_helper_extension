@@ -18,7 +18,7 @@ if (hfGalleryRegExp.test(url)) {
             let ele = eles[i];
             let link = ele.href;
             console.log("Found URL: " + link);
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
     }
     let nextEle = document.querySelector("li.next a");
@@ -26,7 +26,7 @@ if (hfGalleryRegExp.test(url)) {
         let link = nextEle.href;
         if (link != url) {
             console.log("Found URL: " + link);
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
     }
 
@@ -41,7 +41,7 @@ if (hfGalleryRegExp.test(url)) {
         let link = ele.src;
         if (link.indexOf("vote_happy.png") == -1) {
             console.log("Found URL: " + link);
-            output.addLink(createLink(link, "image"));
+            output.addLink(createLinkLegacy(link, "image"));
         }
     }
 
@@ -49,7 +49,7 @@ if (hfGalleryRegExp.test(url)) {
     if (ele != null) {
         let link = ele.src;
         console.log("Found URL: " + link);
-        output.addLink(createLink(link, "flash"));
+        output.addLink(createLinkLegacy(link, "flash"));
     }
 }
 }

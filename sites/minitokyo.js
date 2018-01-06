@@ -20,7 +20,7 @@ let miniTokyoSource = {
                     let m = this.viewRegexp.exec(link);
                     link = "http://gallery.minitokyo.net/download/" + m[1];
                 }
-                output.addLink(createLink(link, "page", null, imageElement.src));
+                output.addLink(createLinkLegacy(link, "page", null, imageElement.src));
             }
 
             let paginationLinks = document.querySelectorAll("p.pagination a");
@@ -28,20 +28,20 @@ let miniTokyoSource = {
                 let linkElement  = paginationLinks[i];
                 if(linkElement.innerText=="Next »") {
                     let link = linkElement.href;
-                    output.addLink(createLink(link, "page"));
+                    output.addLink(createLinkLegacy(link, "page"));
                 }
             }
             result = true;
         } else if(this.viewRegexp.test(url)) {
             let m = this.viewRegexp.exec(url);
             let link = "http://gallery.minitokyo.net/download/" + m[1];
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
             result = true;
         } else if(this.downloadRegexp.test(url)) {
             let imageElement = document.querySelector("div#image img");
             if(imageElement!=null) {
                 let link = imageElement.src;
-                output.addLink(createLink(link, "image"));
+                output.addLink(createLinkLegacy(link, "image"));
             }
             result = true;
         }

@@ -5,6 +5,11 @@ let deviantartSource = {
     regExp: new RegExp("https?://([^\\.]+)\\.deviantart\\.com/art/.*", 'i'),
     sandboxRegExp: new RegExp("https?://sandbox\\.deviantart\\.com.*", 'i'),
 
+
+    isSupported: function(url) {
+        return this.regExp.test(url);
+    },
+
     monitor: function (url) {
         if(!this.galleryRegExp.test(url))
             return;
@@ -69,11 +74,11 @@ let deviantartSource = {
                     }
                 } else {
                     console.log("Found URL: " + ele.src);
-                    output.addLink(createLink(ele.src, "image"));
+                    output.addLink(createLinkLegacy(ele.src, "image"));
                 }
             } else {
                 console.log("Found URL: " + ele.href);
-                output.addLink(createLink(ele.href, "image"));
+                output.addLink(createLinkLegacy(ele.href, "image"));
             }
         } else if (this.galleryRegExp.test(url)) {
             result = true;
@@ -100,7 +105,7 @@ let deviantartSource = {
                 link = cachedLinks[i];
 
                 console.log("Found URL: " + link);
-                output.addLink(createLink(link, "page"));
+                output.addLink(createLinkLegacy(link, "page"));
             }
         } else if(this.sandboxRegExp.test(url)) {
             console.log("Deviantart sandbox");
@@ -108,7 +113,7 @@ let deviantartSource = {
             let ele = document.querySelector("embed#sandboxembed");
             if(ele!=null) {
                 let link = ele.src;
-                output.addLink(createLink(link));
+                output.addLink(createLinkLegacy(link));
             }
         }
 

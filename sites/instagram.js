@@ -5,6 +5,11 @@ let instagramSource = {
 
     metaUserRegexp: new RegExp("\\(@([^\\)]+)\\)"),
 
+
+    isSupported: function(url) {
+        return this.regExp.test(url);
+    },
+
     handleLoadMoreButton: function() {
         let eles = document.querySelectorAll("main article div a");
         for(let i = 0; i< eles.length; i++) {
@@ -40,9 +45,9 @@ let instagramSource = {
                     let link = ele.src;
                     console.log("Found URL: " + link);
                     if (ele.nodeName.toLowerCase() === "video") {
-                        outputData.addLink(createLink(link, "video", null, ele.poster));
+                        outputData.addLink(createLinkLegacy(link, "video", null, ele.poster));
                     } else {
-                        outputData.addLink(createLink(link, "image"));
+                        outputData.addLink(createLinkLegacy(link, "image"));
                     }
                 }
                 //break;
@@ -73,9 +78,9 @@ let instagramSource = {
                 console.log("Found URL: " + link);
                 let imgEle = ele.querySelector("img");
                 if (imgEle != null) {
-                    outputData.addLink(createLink(link, "page", null, imgEle.src));
+                    outputData.addLink(createLinkLegacy(link, "page", null, imgEle.src));
                 } else {
-                    outputData.addLink(createLink(link, "page"));
+                    outputData.addLink(createLinkLegacy(link, "page"));
                 }
             }
 

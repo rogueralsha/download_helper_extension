@@ -4,6 +4,11 @@ let artstationSource = {
     newRegExp: new RegExp("https?://([^\\.]+)\\.artstation\\.com/projects/.*", 'i'),
     userRegExp: new RegExp("https?://www\\.artstation\\.com/(.*)", 'i'),
 
+
+    isSupported: function(url) {
+        return this.regExp.test(url);
+    },
+
     process: async function (url, output) {
         let result =   false;
         if(this.newRegExp.test(url)) {
@@ -23,7 +28,7 @@ let artstationSource = {
                     output.error = "No media found";
                 } else {
                     let link = ele.href;
-                    output.addLink(createLink(link, "image"));
+                    output.addLink(createLinkLegacy(link, "image"));
                 }
             }
         } else if (this.regExp.test(url)) {
@@ -44,7 +49,7 @@ let artstationSource = {
                     output.error = "No media found";
                 } else {
                     let link = ele.href;
-                    output.addLink(createLink(link, "image"));
+                    output.addLink(createLinkLegacy(link, "image"));
                 }
             }
 
@@ -57,7 +62,7 @@ let artstationSource = {
                 let ele = eles[i];
                 let link = ele.href;
                 let imgEle = ele.querySelector("img.image");
-                output.addLink(createLink(link, "page",null, imgEle.src));
+                output.addLink(createLinkLegacy(link, "page",null, imgEle.src));
             }
 
 

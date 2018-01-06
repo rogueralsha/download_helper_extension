@@ -1,0 +1,13 @@
+div#inPageDownloadHelper {
+    all: unset;
+    *{
+        all: unset;
+    }
+}
+
+a.downloadHelperLink:link {
+    color:red;
+}
+a.downloadHelperLink:visited {
+    color: black;
+}

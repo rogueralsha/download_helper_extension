@@ -36,12 +36,12 @@ function processFlickr(url, output) {
             if (flickrImageRegexp.test(link)) {
                 let imageId = flickrImageRegexp.exec(link)[2];
                 link = "https://www.flickr.com/photos/" + output.artist + "/" + imageId + "/sizes/";
-                output.addLink(createLink(link, "page", null, ele.style.backgroundImage));
+                output.addLink(createLinkLegacy(link, "page", null, ele.style.backgroundImage));
             }
         }
         let nextEle = document.querySelector("div.pagination-view a[rel=next]");
         if (nextEle != null) {
-            output.addLink(createLink(nextEle.href, "page"));
+            output.addLink(createLinkLegacy(nextEle.href, "page"));
         }
 
     }
@@ -57,14 +57,14 @@ function processFlickr(url, output) {
             let link = ele.href;
             let linkSize = flickrSizesRegexp.exec(link)[3];
             if (flickrSizePriorities.indexOf(currentSize) < flickrSizePriorities.indexOf(linkSize)) {
-                output.addLink(createLink(link, "page"));
+                output.addLink(createLinkLegacy(link, "page"));
             } else {
                 let imgEle = document.querySelector("div#allsizes-photo img");
-                output.addLink(createLink(imgEle.src, "image"));
+                output.addLink(createLinkLegacy(imgEle.src, "image"));
             }
         } else {
             let imgEle = document.querySelector("div#allsizes-photo img");
-            output.addLink(createLink(imgEle.src, "image"));
+            output.addLink(createLinkLegacy(imgEle.src, "image"));
         }
     }
 }

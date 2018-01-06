@@ -35,7 +35,7 @@ function processTumblr(url, output) {
             let links = document.querySelectorAll("div.post a.hover");
             for (let i = 0; i < links.length; i++) {
                 let link = links[i].href + "/mobile";
-                output.addLink(createLink(link, "page"));
+                output.addLink(createLinkLegacy(link, "page"));
             }
             resolve();
         } else if(tumblrPostRegExp.test(url)) {
@@ -53,8 +53,10 @@ function processTumblr(url, output) {
             for (let i = 0; i < linkEles.length; i++) {
                 let linkEle = linkEles[i];
                 if (tumblrRedirectRegExp.test(linkEle.href)) {
+                    console.log("Decoding redirect URL", linkEle.href);
                     let link = tumblrRedirectRegExp.exec(linkEle.href)[1];
                     link = decodeURIComponent(link);
+                    console.log("Link decoded", link);
                     evaluateLink(link, output);
                 }
 
@@ -129,11 +131,11 @@ function getTumblrImages(documentRoot) {
                     link = link.replace("_400", "_1280");
                 }
                 console.log("Found URL: " + link);
-                output.push(createLink(link, "image"));
+                output.push(createLinkLegacy(link, "image"));
                 if (link.indexOf("_1280.") > -1) {
                     link = link.replace("_1280", "_raw");
                     console.log("Found URL: " + link);
-                    output.push(createLink(link, "image"));
+                    output.push(createLinkLegacy(link, "image"));
                 }
             }
         }

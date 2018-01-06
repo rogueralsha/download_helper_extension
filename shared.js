@@ -1,12 +1,93 @@
 /**
  * Created by testuset on 1/26/2017.
  */
+
+let processing = false;
+let newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folder)\\/(.+)", 'i');
+
+let pixivSiteRegexp = new RegExp("https?://www\\.pixiv\\.net/", 'i');
+let pixivImgRegexp = new RegExp("https?://i\\.pximg\\.net/.+", 'i');
+
+let mixtapeRegexp = new RegExp("https?:\\/\\/my\.mixtape\.moe\\/([^\\/]+)$", 'i');
+let webmVideoRegexp = new RegExp("https?:\\/\\/webm\.video\\/i\\/([^\\/]+)$", 'i');
+let armariumRegexp = new RegExp("https?:\\/\\/webm\\.armarium\\.org\\/i\\/([^\\/]+)$", 'i');
+let catboxRegexp = new RegExp("https?:\\/\\/files\.catbox\.moe\\/([^\\/]+)$", 'i');
+let safeMoeRegexp = new RegExp("https?:\\/\\/.?\.safe\.moe\\/([^\\/]+)$", 'i');
+
+let eroshareRegexp = new RegExp("https?:\\/\\/eroshare\.com\\/([^\\/]+)$", 'i');
+let pimpandhostRegexp = new RegExp("https?:\\/\\/pimpandhost\\.com\\/image\\/(\\d+)$", 'i');
+let imagebamRegexp = new RegExp("https?:\\/\\/www\\.imagebam\\.com\\/image\\/([\\da-f]+)$", 'i');
+let uploaddirRegexp = new RegExp("https?:\\/\\/uploadir\\.com\\/u\\/(.+)$", 'i');
+let dokoMoeRegexp = new RegExp("https?:\\/\\/b\\.doko\\.moe\\/(.+)$", 'i');
+
+
+let siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
+
+
+let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)");
+
+let sources = [gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource, deviantartSource,
+    instagramSource, miniTokyoSource, redditSource, patreonSource, hegreSource, twitterSource];
+
 function isNullOrEmpty(input) {
     return input == null || input == "";
 }
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function evaluateLink(link, output, filename, select) {
+    let result = isSupportedPage(link)
+    if (result.result) {
+        let thumbnail = null;
+        if(result.thumbnail!=null) {
+            thumbnail = result.thumbnail;
+        }
+        if(result.directLink) {
+            output.addLink(createLink({url: link, type: "image", filename: filename, select: select, thumbnail: thumbnail}));
+        } else {
+            output.addLink(createLink({url: link, type: "page", filename: filename, select: select, thumbnail: thumbnail}));
+        }
+    } else if (mixtapeRegexp.test(link)||webmVideoRegexp.test(link)||armariumRegexp.test(link)||catboxRegexp.test(link)
+        ||safeMoeRegexp.test(link)||redditSource.imageRegexp.test(link)||uploaddirRegexp.test(link)||dokoMoeRegexp.test(link)) {
+        output.addLink(createLink({url: link, type: "image", filename: filename, select: select}));
+    }
+}
+
+function isSupportedPage(link) {
+    let output = {};
+    output.result = false;
+    output.thumbnail = null;
+    output.directLink = false;
+
+    for (let i = 0; i < sources.length; i++) {
+        let source = sources[i];
+        if(source.isSupported!=undefined&&source.isSupported(link)) {
+            output.result = true;
+            if(source.getThumbnail!==undefined) {
+                output.thumbnail = source.getThumbnail(link);
+            }
+            if(source.isDirectFileLink!==undefined) {
+                output.directLink = source.isDirectFileLink(link);
+            }
+            break;
+        }
+    }
+
+    if(output.result == false) {
+        if (hfRegExp.test(link) ||
+            tumblrRegExp.test(link) ||
+            flickrRegexp.test(link) ||
+            eroshareRegexp.test(link) ||
+            postimgPostRegexp.test(link) ||
+            postimgAlbumRegexp.test(link) ||
+            pimpandhostRegexp.test(link) ||
+            imagebamRegexp.test(link)) {
+            output.result = true;
+        }
+    }
+    return output;
 }
 
 function getPageContentsFromIframe(iframeUrl) {
@@ -38,7 +119,9 @@ function applyButtonStyle(button) {
     button.style.color = "black";
     button.style.borderWidth = "0";
     button.style.borderRadius = "4px";
-    button.style.minWidth = "32pt";
+    button.style.minWidth = "20pt";
+    button.style.maxWidth = "32pt";
+    button.style.height= "20pt";
     button.style.userSelect = "none";
     button.style.padding = "4pt";
     button.style.margin = "4pt";
@@ -199,6 +282,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     openButton.title = "Open In New Tab";
     openButton.onclick = async function () {
         "use strict";
+        processing = true;
         let openList = [];
         for (let i = 0, len = checkboxes.length; i < len; i++) {
             let check = checkboxes[i];
@@ -215,6 +299,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         progressStatus.max = openList.length;
 
         await openHelper(openList, progressStatus,delayCheck.checked);
+        processing = false;
     };
     buttonBarDiv.appendChild(openButton);
 
@@ -226,7 +311,9 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     downloadButton.innerText = "↓";
     downloadButton.title = "Download";
     downloadButton.onclick = async function () {
+        processing = true;
         await downloadMedia(data,pathInput.value, checkboxes, savePathCheck.checked, progressDiv);
+        processing = false;
     };
     buttonBarDiv.appendChild(downloadButton);
 
@@ -235,9 +322,11 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     downloadCloseButton.innerText = "↓ & ✘";
     downloadCloseButton.title = "Download & Close";
     downloadCloseButton.onclick = async function () {
+        processing = true;
         if(await downloadMedia(data,pathInput.value, checkboxes, savePathCheck.checked, progressDiv)) {
             closeTab();
         }
+        processing = false;
     };
     buttonBarDiv.appendChild(downloadCloseButton);
 
@@ -283,8 +372,14 @@ function createLinkRow(table, link, i, checkboxes) {
 
     let check = document.createElement("input");
     check.type = "checkbox";
+    check.style.height = "8pt";
+    check.style.width = "8pt";
     check.value = i;
-    check.checked = true;
+    if(link["select"]===true) {
+        check.checked = true;
+    } else {
+        check.checked = false;
+    }
     //
     // if(link["date"]!=null) {
     //     let date = new Date(link["date"]);
@@ -363,7 +458,9 @@ function createLinkRow(table, link, i, checkboxes) {
     }
 
 
-    let textCell = tdWrap(linkWrap(link["filename"], link["url"]));
+    let textLink = linkWrap(link["filename"], link["url"]);
+    textLink.classList.add("downloadHelperLink");
+    let textCell = tdWrap(textLink);
     textCell.style.width = "120px";
     textCell.style.overflow = "hidden";
     textCell.style.textOverflow = "ellipsis";

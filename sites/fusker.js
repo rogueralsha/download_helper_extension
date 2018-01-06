@@ -14,7 +14,7 @@ function processAlsScan(url, output) {
         if(ele!=null) {
             let link = ele.href;
             m = alsscanFileDownloadRegex.exec(link);
-            output.addLink(createLink(link, "image",m[1]));
+            output.addLink(createLinkLegacy(link, "image",m[1]));
         }
 
     } else if(alsscanGalleryRegexp.test(url)) {
@@ -29,13 +29,13 @@ function processAlsScan(url, output) {
             let link = ele.href;
             if(imgEle!=null) {
                 let thumb = imgEle.src;
-                output.addLink(createLink(link, "page", null, thumb));
+                output.addLink(createLinkLegacy(link, "page", null, thumb));
             }
         }
         let ele = document.querySelector("ul.pagination li:last-child a.tokenable");
         if(ele!=null&&ele.innerText=="Next") {
             let link = ele.href;
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
     }
 }

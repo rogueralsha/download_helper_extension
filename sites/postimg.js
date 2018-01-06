@@ -20,7 +20,7 @@ if (postimgAlbumRegexp.test(url)) {
     for (let i = 0; i < eles.length; i++) {
         let link = eles[i].href;
         if(postimgPostRegexp.test(link)) {
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
     }
 } else if (postimgPostRegexp.test(url)) {
@@ -34,7 +34,7 @@ if (postimgAlbumRegexp.test(url)) {
     let ele = document.querySelector("img#main-image");
     if (ele != null) {
         let link = ele.src;
-        output.addLink(createLink(link, "image"));
+        output.addLink(createLinkLegacy(link, "image"));
     }
 }
 }

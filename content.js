@@ -1,59 +1,6 @@
-let twitterRegExp = new RegExp("https?://twitter\\.com/([^/]+)/?", 'i');
-let twitterPostRegExp = new RegExp("https?://twitter\\.com/([^/]+)/status/.+", 'i');
-
-let newsBlurRegExp = new RegExp("https?:\\/\\/newsblur\.com\\/(site\\/\\d+|folder)\\/(.+)", 'i');
-
-let pixivSiteRegexp = new RegExp("https?://www\\.pixiv\\.net/", 'i');
-let pixivImgRegexp = new RegExp("https?://i\\.pximg\\.net/.+", 'i');
-
-
-let gfycatRegexp = new RegExp("https?:\\/\\/gfycat\.com\\/([^\\/]+)$", 'i');
-let mixtapeRegexp = new RegExp("https?:\\/\\/my\.mixtape\.moe\\/([^\\/]+)$", 'i');
-let eroshareRegexp = new RegExp("https?:\\/\\/eroshare\.com\\/([^\\/]+)$", 'i');
-let pimpandhostRegexp = new RegExp("https?:\\/\\/pimpandhost\\.com\\/image\\/(\\d+)$", 'i');
-let imagebamRegexp = new RegExp("https?:\\/\\/www\\.imagebam\\.com\\/image\\/([\\da-f]+)$", 'i');
-let siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
-
-
-//http://pimpandhost.com/image/15692563
-//http://t.umblr.com/redirect?z=https%3A%2F%2Fmy.mixtape.moe%2Fjuiydn.png&t=YmMzMWMzNTQzOTNlMjkxZGFlZjE1MGIxZTQ2MzNmYmRjOGM0NjQ5ZixVUFFnUXI0SA%3D%3D&b=t%3AOq704QYOd310j2BA8Z3cQg&p=http%3A%2F%2Fcolonelyobo.tumblr.com%2Fpost%2F160042170354%2Fnom-full-size-hey-with-all-the-running-she-does&m=1
-
-
-let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)");
-
-function evaluateLink(link, output, filename) {
-    if (isSupportedPage(link)) {
-        output.addLink(createLink(link, "page", filename));
-    } else if (mixtapeRegexp.test(link)) {
-        output.addLink(createLink(link, "image", filename));
-    }
-}
-
-function isSupportedPage(link) {
-    if (imgurAlbumRegexp.test(link) ||
-        imgurPostRegexp.test(link) ||
-        twitterPostRegExp.test(link) ||
-        //patreonPostRegExp.test(link) ||
-        hfRegExp.test(link) ||
-        instagramSource.regExp.test(link) ||
-        tumblrRegExp.test(link) ||
-        artstationSource.regExp.test(link) ||
-        deviantartSource.regExp.test(link) ||
-        flickrRegexp.test(link) ||
-        eroshareRegexp.test(link) ||
-        gfycatRegexp.test(link) ||
-        postimgPostRegexp.test(link) ||
-        postimgAlbumRegexp.test(link) ||
-        pimpandhostRegexp.test(link) ||
-        imagebamRegexp.test(link)) {
-        return true;
-    }
-    return false;
-}
-
-
 let cachedLinks = [];
 let imgEles = [];
+
 
 function downloadItem(link) {
     return new Promise(async function (resolve, reject) {
@@ -66,7 +13,7 @@ function downloadItem(link) {
                 resolve();
                 return;
             }
-            result.addLink(createLink(link, "image"));
+            result.addLink(createLinkLegacy(link, "image"));
             chrome.runtime.sendMessage({command: "download", results: result}, function (response) {
                 resolve();
             });
@@ -104,46 +51,50 @@ function downloadHelperPageInit() {
     document.body.appendChild(toolbarEle);
 
     console.log("DOM content loaded");
-    imgEles = document.getElementsByTagName("img");
-    if (imgEles != null) {
-        for (let i = 0; i < imgEles.length; i++) {
-            let imgEle = imgEles[i];
-            imgEle.dataset["index"] = i;
-            imgEle.addEventListener("dragend", function (event) {
-                downloadItem(imgEle.src);
-            });
-            imgEle.addEventListener("mouseover", function (event) {
-                let url = window.location.href;
-                if(!(isHentaiFoundrySite(url)||
-                    isShimmieSite())) {
-                    return;
-                }
-
-                let rect = event.srcElement.getBoundingClientRect();
-                let y = rect.top;
-                let x = rect.left;
-                toolbarEle.dataset["link"] = event.srcElement.src;
-                toolbarEle.style.left = x + "px";
-                toolbarEle.style.top = y + "px";
-                toolbarEle.style.display = "block";
-            });
-        }
-    }
+    // imgEles = document.getElementsByTagName("img");
+    // if (imgEles != null) {
+    //     for (let i = 0; i < imgEles.length; i++) {
+    //         let imgEle = imgEles[i];
+    //         imgEle.dataset["index"] = i;
+    //         // imgEle.addEventListener("dragend", function (event) {
+    //         //     downloadItem(imgEle.src);
+    //         // });
+    //         // imgEle.addEventListener("mouseover", function (event) {
+    //         //     let url = window.location.href;
+    //         //     if(!(isHentaiFoundrySite(url)||
+    //         //         isShimmieSite())) {
+    //         //         return;
+    //         //     }
+    //         //
+    //         //     let rect = event.srcElement.getBoundingClientRect();
+    //         //     let y = rect.top;
+    //         //     let x = rect.left;
+    //         //     toolbarEle.dataset["link"] = event.srcElement.src;
+    //         //     toolbarEle.style.left = x + "px";
+    //         //     toolbarEle.style.bottom = y + "px";
+    //         //     toolbarEle.style.display = "block";
+    //         // });
+    //     }
+    // }
 
     if(!inIframe()) {
         let url = window.location.href;
         deviantartSource.monitor(url);
 
         inPageOutputElement = document.createElement("div");
+        inPageOutputElement.id = "inPageDownloadHelper";
+        inPageOutputElement.style.all= "initial";
+
         inPageOutputElement.style.position = "fixed";
+        inPageOutputElement.style.maxWidth = "500px";
         inPageOutputElement.style.right = "4pt";
-        inPageOutputElement.style.top = "4pt";
+        inPageOutputElement.style.top = "34pt";
         inPageOutputElement.style.padding = "4pt";
-        inPageOutputElement.style.maxHeight= window.innerHeight + "px";
+        inPageOutputElement.style.maxHeight= (window.innerHeight-100) + "px";
         inPageOutputElement.style.overflowY = "auto";
         inPageOutputElement.style.backgroundColor = "rgba(255,255,255,0.8)";
         inPageOutputElement.style.border = "solid 1px black";
-        inPageOutputElement.style.zIndex = 2147483647;
+        inPageOutputElement.style.zIndex = "2147483647";
 
         document.body.appendChild(inPageOutputElement);
 
@@ -151,9 +102,17 @@ function downloadHelperPageInit() {
 
         window.onfocus = function() {
             "use strict";
-            refreshInPageOutput();
+            if(!processing) {
+                refreshInPageOutput();
+            }
         }
     }
+}
+
+async function useInPage() {
+    "use strict";
+
+
 }
 
 async function refreshInPageOutput() {
@@ -164,7 +123,7 @@ async function refreshInPageOutput() {
 
 window.onload = downloadHelperPageInit;
 
-let sources = [artstationSource, deviantartSource, instagramSource, miniTokyoSource, redditSource];
+let urlMatcherRegex = new RegExp("^https?:\\/\\/(.+)$", 'i');
 
 async function getPageMedia() {
     let url = window.location.href;
@@ -175,22 +134,13 @@ async function getPageMedia() {
         outputData.error = null;
         outputData.saveByDefault = true;
         outputData.addLink = function (link) {
-            let parser = document.createElement('a');
-            parser.href = link.url;
-
+            let matchedLink = urlMatcherRegex.exec(link.url)[1];
             for (let i = 0; i < this.links.length; i++) {
-                if (this.links[i].url == link.url) {
+                let matchedOtherLink = urlMatcherRegex.exec(this.links[i].url)[1];
+
+                if (matchedLink == matchedOtherLink) {
+                    console.log("Duplicate URL, skipping");
                     return;
-                } else {
-                    let parser2 = document.createElement("a");
-                    parser2.href = this.links[i].url;
-                    if (parser.protocol != parser2.protocol) {
-                        console.log("Mismatching protocols");
-                        parser.protocol = parser2.protocol;
-                        if (parser.href == parser2.href) {
-                            return;
-                        }
-                    }
                 }
             }
             this.links.push(link);
@@ -201,7 +151,9 @@ async function getPageMedia() {
         let result;
         for (let i = 0; i < sources.length; i++) {
             let source = sources[i];
-            result = await source.process(url, outputData);
+            if(source.process!==undefined) {
+                result = await source.process(url, outputData);
+            }
             if (result)
                 break;
         }
@@ -211,39 +163,6 @@ async function getPageMedia() {
                 await processTumblr(url, outputData);
             } else if (isHentaiFoundrySite(url)) {
                 processHentaiFoundry(url, outputData);
-            } else if (isPatreonSite(url)) {
-                await processPatreon(url, outputData);
-            } else if (twitterRegExp.test(url)) {
-                console.log("Twitter page detected");
-                let matches = twitterRegExp.exec(url);
-                outputData.artist = matches[1];
-                console.log("Artist: " + outputData.artist);
-
-                if (twitterPostRegExp.test(url)) {
-                    // This means we're viewing an individual post
-                    let elements = document.querySelectorAll(".permalink-container .js-adaptive-photo img");
-                    for (i = 0; i < elements.length; i++) {
-                        let ele = elements[i];
-                        let link = ele.src;
-                        console.log("Found URL: " + link);
-                        outputData.addLink(createLink(link + ":large", "image", getFileName(link)));
-                    }
-                } else {
-                    // This means it's a user's page
-                    let tweets = document.querySelectorAll("div.tweet");
-                    for (i = 0; i < tweets.length; i++) {
-                        let ele = tweets[i];
-                        let id = ele.dataset["tweetId"];
-                        if (id === undefined) {
-                            continue;
-                        }
-                        let link = "https://twitter.com/" + outputData.artist + "/status/" + id;
-                        console.log("Found URL: " + link);
-                        outputData.addLink(createLink(link, "page", id));
-                    }
-                }
-            } else if (isImgurSite(url)) {
-                await processImgur(url, outputData);
             } else if (isPostimgSite(url)) {
                 await processPostimg(url, outputData);
             } else if (isMetArtSite(url)) {
@@ -276,7 +195,7 @@ async function getPageMedia() {
                     let link = thumbEle.href;
                     console.log("Found URL: " + link);
                     if (imgEle.title != null && imgEle.title.length > 0) {
-                        outputData.addLink(createLink(link, "page", imgEle.title, imgEle.src));
+                        outputData.addLink(createLinkLegacy(link, "page", imgEle.title, imgEle.src));
                     } else {
                         let tableEle = thumbEle.parentNode;
                         while (tableEle.nodeName.toLowerCase() != "table") {
@@ -284,9 +203,9 @@ async function getPageMedia() {
                         }
                         let titleEle = tableEle.querySelector("td.tableh2 a");
                         if (titleEle != null) {
-                            outputData.addLink(createLink(link, "page", titleEle.innerText, imgEle.src));
+                            outputData.addLink(createLinkLegacy(link, "page", titleEle.innerText, imgEle.src));
                         } else {
-                            outputData.addLink(createLink(link, "page", null, imgEle.src));
+                            outputData.addLink(createLinkLegacy(link, "page", null, imgEle.src));
                         }
 
                     }
@@ -301,15 +220,15 @@ async function getPageMedia() {
                     if (downEle != null) {
                         let link = downEle.href;
                         console.log("Found URL: " + link);
-                        outputData.addLink(createLink(link, "image"));
+                        outputData.addLink(createLinkLegacy(link, "image"));
                     } else if (objEle != null) {
                         let link = objEle.value;
                         console.log("Found URL: " + link);
-                        outputData.addLink(createLink(link, "video"));
+                        outputData.addLink(createLinkLegacy(link, "video"));
                     } else if (imgEle != null) {
                         let link = imgEle.src;
                         console.log("Found URL: " + link);
-                        outputData.addLink(createLink(link, "image"));
+                        outputData.addLink(createLinkLegacy(link, "image"));
                     } else {
                         console.debug("No media element found!");
                     }
@@ -338,7 +257,7 @@ async function getPageMedia() {
 
                         if (navPage == currentPage + 1) {
                             console.log("Found URL: " + link);
-                            outputData.addLink(createLink(link, "page"));
+                            outputData.addLink(createLinkLegacy(link, "page"));
                         }
                     }
                 }
@@ -371,20 +290,9 @@ async function getPageMedia() {
                         if (dateEle != null) {
                             date = Date.parse(dateEle.innerText);
                         }
-                        outputData.addLink(createLink(link, "image", null, thumbnail, date));
+                        outputData.addLink(createLinkLegacy(link, "image", null, thumbnail, date));
                     }
                 }
-            } else if (gfycatRegexp.test(url)) {
-                console.log("Gfycat page detected");
-                outputData.saveByDefault = false;
-
-                outputData.artist = "gfycat";
-                console.log("Artist: " + outputData.artist);
-                let videoEle = document.querySelector("video.share-video");
-                let sourceEle = document.querySelector("source#webmSource");
-                let link = sourceEle.src;
-                console.log("Found URL: " + link);
-                outputData.addLink(createLink(link, "video"));
             } else if (eroshareRegexp.test(url)) {
                 console.log("Eroshare page detected");
                 let ele = document.querySelector(".user-link");
@@ -395,7 +303,7 @@ async function getPageMedia() {
                     let videoEle = videoEles[j];
                     let link = videoEle.src;
                     console.log("Found URL: " + link);
-                    outputData.addLink(createLink(link, "video", null, videoEle.poster));
+                    outputData.addLink(createLinkLegacy(link, "video", null, videoEle.poster));
                 }
             } else if (isFlickrSite(url)) {
                 processFlickr(url, outputData);
@@ -409,7 +317,7 @@ async function getPageMedia() {
 
                 let imgEle = document.querySelector("div#main-container img");
                 if (imgEle != null) {
-                    outputData.addLink(createLink(imgEle.src, "image"));
+                    outputData.addLink(createLinkLegacy(imgEle.src, "image"));
                 }
             } else if (imagebamRegexp.test(url)) {
                 console.log("Imagebam image detected");
@@ -419,7 +327,7 @@ async function getPageMedia() {
 
                 let imgEle = document.querySelector("div.container-full img");
                 if (imgEle != null) {
-                    outputData.addLink(createLink(imgEle.src, "image"));
+                    outputData.addLink(createLinkLegacy(imgEle.src, "image"));
                 }
             } else if (pixivSiteRegexp.test(url) || pixivImgRegexp.test(url)) {
                 processPixiv(url, outputData);
@@ -439,11 +347,11 @@ async function getPageMedia() {
                         let linkEle = ele.querySelector("a");
                         let link = linkEle.href;
 
-                        outputData.addLink(createLink(link, "file", null, imgEle.src));
+                        outputData.addLink(createLinkLegacy(link, "file", null, imgEle.src));
                     }
                     let ele = document.querySelector("div.ngg-navigation a.next");
                     if (ele != null) {
-                        outputData.addLink(createLink(ele.href, "page"));
+                        outputData.addLink(createLinkLegacy(ele.href, "page"));
                     }
 
                 }
@@ -460,7 +368,7 @@ async function getPageMedia() {
                             continue;
                         }
 
-                        outputData.addLink(createLink(link, "file", null, imgEle.src));
+                        outputData.addLink(createLinkLegacy(link, "file", null, imgEle.src));
                     }
 
                 }
@@ -477,7 +385,7 @@ async function getPageMedia() {
                             continue;
                         }
 
-                        outputData.addLink(createLink(link.split("?")[0], "file", null, imgEle.src));
+                        outputData.addLink(createLinkLegacy(link.split("?")[0], "file", null, imgEle.src));
                     }
 
                 }
@@ -486,7 +394,7 @@ async function getPageMedia() {
                 if (ele != null) {
                     // This should catch images that have been opened in chrome
                     outputData.artist = siteRegexp.exec(url)[1];
-                    outputData.addLink(createLink(ele.src, "file"));
+                    outputData.addLink(createLinkLegacy(ele.src, "file"));
                     otherSiteFound = true;
                 }
 
@@ -513,10 +421,21 @@ function getFileName(link) {
     return decodeURI(link.substring(link.lastIndexOf('/') + 1).split("?")[0])
 }
 
-function createLink(url, type, filename, thumbnail, date) {
-    if (imgurPostRegexp.test(url)) {
-        // Mobile imgur links redirect, sow e need to filter them a bit
-        let m = imgurPostRegexp.exec(url);
+function createLinkLegacy(url, type, filename, thumbnail, date, select) {
+    return createLink({url: url, type: type, filename: filename, thumbnail: thumbnail, date: date, select: select});
+}
+function createLink(args) {
+    console.log("createLink", args)
+    let type = args.type;
+    let url = args.url;
+    let filename = args.filename;
+    let thumbnail = args.thumbnail;
+    let date = args.date;
+    let select = args.select;
+
+    if (imgurSource.postRegexp.test(url)) {
+        // Mobile imgur links redirect, so we need to filter them a bit
+        let m = imgurSource.postRegexp.exec(url);
         if (m[1] == "m.") {
             url = url.replace("//m.imgur.", "//imgur.")
         }
@@ -527,6 +446,11 @@ function createLink(url, type, filename, thumbnail, date) {
     outputData["url"] = resolvePartialUrl(decodeURI(url));
     outputData["type"] = type;
     outputData["date"] = date;
+
+    outputData["select"] = true;
+    if(select!=null) {
+        outputData["select"] = select;
+    }
 
     if (filename == null) {
         outputData["filename"] = getFileName(url);

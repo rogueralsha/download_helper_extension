@@ -5,6 +5,9 @@
   "description": "Provides various tools to assist with downloading sites and media",
   "version": "1.0",
   "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html"
+  },
   "background": {
     "scripts": ["settings.js","download.js","bg.js"]
   },
@@ -14,13 +17,16 @@
       "matches": ["http://*/*",
         "https://*/*"
       ],
+      "css": [ "styles.css" ],
       "js": ["download.js","settings.js",
-        "shared.js",
         "sites/alsscan.js",
         "sites/artstation.js",
         "sites/deviantart.js",
         "sites/ehentai.js",
+        "sites/erome.js",
         "sites/flickr.js",
+        "sites/gfycat.js",
+        "sites/hegre.js",
         "sites/hentaifoundry.js",
         "sites/imgur.js",
         "sites/instagram.js",
@@ -32,6 +38,10 @@
         "sites/reddit.js",
         "sites/shimmie.js",
         "sites/tumblr.js",
+        "sites/twitter.js",
+        "sites/webmshare.js",
+        "sites/youtube.js",
+        "shared.js",
         "content.js"],
       "all_frames": true
     }

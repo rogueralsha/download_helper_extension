@@ -25,7 +25,7 @@ function processPixiv(url, output) {
                 let thumb = null;
                 if (imgEle != null)
                     thumb = imgEle.src;
-                output.addLink(createLink(link, "page", null, thumb));
+                output.addLink(createLinkLegacy(link, "page", null, thumb));
             }
 
         }
@@ -33,8 +33,8 @@ function processPixiv(url, output) {
         let ele = document.querySelector("body img");
         ele.crossOrigin = "Anonymous";
         let link = ele.src;
-        link = createLink(link, "page");
-        //link = createLink(getBase64Image(ele), "image", getFileName(link));
+        link = createLinkLegacy(link, "page");
+        //link = createLinkLegacy(getBase64Image(ele), "image", getFileName(link));
         link["referer"] = url;
         output.addLink(link);
     } else if(imgRegexp.test(url)) {
@@ -48,27 +48,27 @@ function processPixiv(url, output) {
         }
         let link = ele.src;
         console.log("Image data: " + getBase64Image(ele));
-        link = createLink(getBase64Image(ele), "image", getFileName(link));
+        link = createLinkLegacy(getBase64Image(ele), "image", getFileName(link));
         link["referer"] = url;
         output.addLink(link);
     } else {
         let showMoreEle = document.querySelector("a.read-more");
         if(showMoreEle!=null) {
             let link = showMoreEle.href;
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
 
         let fullSizeEles = document.querySelectorAll("div.item-container a.full-size-container");
         for(let i = 0; i < fullSizeEles.length; i++) {
             let ele = fullSizeEles[i];
             let link = ele.href;
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
 
         let originalImageele = document.querySelector("img.original-image");
         if(originalImageele!=null) {
             let link = originalImageele.dataset.src;
-            output.addLink(createLink(link, "page"));
+            output.addLink(createLinkLegacy(link, "page"));
         }
     }
 }
