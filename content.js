@@ -334,6 +334,7 @@ async function getPageMedia() {
             } else if (isShimmieSite()) {
                 processShimmie(url, outputData);
             } else {
+                console.log("Checking for generic image and gallery structures");
                 let otherSiteFound = false;
 
                 // check for wp gallery types

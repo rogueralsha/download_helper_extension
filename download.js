@@ -41,6 +41,11 @@ function downloadHelper(downloadPath, linkList, progress) {
                 return;
             }
 
+            if(!link.select) {
+                await downloadHelper(downloadPath, linkList, progress);
+                resolve();
+            }
+
             console.log("Downloading link");
             console.log(link)
 

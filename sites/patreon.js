@@ -5,7 +5,7 @@ let patreonSource = {
     postsRegExp: new RegExp("^https?://www\\.patreon\\.com/([^/^?]+)/posts/?$", 'i'),
     postRegExp: new RegExp("https?://www\\.patreon\\.com/posts/.*", 'i'),
     userRegExp: new RegExp("^https?://www\\.patreon\\.com/([^/^?]+)$", 'i'),
-
+    fileRegExp: new RegExp("^https?:\\/\\/www\\.patreon\\.com\\/file\\?[^\\/]+$", 'i'),
 
     process: async function (url, output) {
         let result =   false;
@@ -35,18 +35,20 @@ let patreonSource = {
 
 
             // Get post attachments
-            let elements = document.querySelectorAll("div.isADGe a.gPULwz");
+            let elements = document.querySelectorAll("a");
             for (let i = 0; i < elements.length; i++) {
                 ele = elements[i];
                 if (ele != null) {
                     let link = ele.href;
-                    console.log("Found URL: " + link);
-                    output.addLink(createLinkLegacy(link, "image", ele.innerText));
+                    if(this.fileRegExp.test(link)) {
+                        console.log("Found URL: " + link);
+                        output.addLink(createLinkLegacy(link, "image", ele.innerText));
+                    }
                 }
             }
 
             // Get links to external media hosts
-            elements = document.querySelectorAll("div.dmXaGo a");
+            elements = document.querySelectorAll("a");
             for (let i = 0; i < elements.length; i++) {
                 ele = elements[i];
                 let link = ele.href;

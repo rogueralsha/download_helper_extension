@@ -12,7 +12,7 @@ let imgurSource = {
     },
 
     isDirectFileLink: function(link) {
-        return imgurSource.directRegexp.test(link);
+        return (!this.videoRegexp.test(link))&& imgurSource.directRegexp.test(link);
     },
 
     process: function (url, outputData) {
@@ -20,7 +20,23 @@ let imgurSource = {
         return new Promise(function(resolve, reject) {
             let result = false;
 
-            if(source.directRegexp.test(url)) {
+        if (source.videoRegexp.test(url)) {
+            result = true;
+            console.log("Imgur video page detected");
+            outputData.saveByDefault = false;
+
+            outputData.artist = "imgur";
+            console.log("Artist: " + outputData.artist);
+
+
+            let videoEle = document.querySelector("video source");
+
+            if (videoEle != null) {
+                let link = videoEle.src;
+                console.log("Found URL: " + link);
+                outputData.addLink(createLinkLegacy(link, "video"));
+            }
+        } else if(source.directRegexp.test(url)) {
                 result = true;
                 console.log("imgur direct link detected");
                 outputData.saveByDefault = false;
@@ -73,22 +89,6 @@ let imgurSource = {
                 xmlhttp.open("GET", "https://imgur.com/ajaxalbums/getimages/" + albumHash + "/hit.json", true);
                 xmlhttp.send();
                 return;
-            } else if (source.videoRegexp.test(url)) {
-                result = true;
-                console.log("Imgur video page detected");
-                outputData.saveByDefault = false;
-
-                outputData.artist = "imgur";
-                console.log("Artist: " + outputData.artist);
-
-
-                let videoEle = document.querySelector("video source");
-
-                if (videoEle != null) {
-                    let link = videoEle.src;
-                    console.log("Found URL: " + link);
-                    outputData.addLink(createLinkLegacy(link, "video"));
-                }
             } else if (source.postRegexp.test(url)) {
                 result = true;
                 console.log("Imgur post page detected");

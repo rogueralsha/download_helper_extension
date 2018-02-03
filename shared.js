@@ -19,15 +19,15 @@ let pimpandhostRegexp = new RegExp("https?:\\/\\/pimpandhost\\.com\\/image\\/(\\
 let imagebamRegexp = new RegExp("https?:\\/\\/www\\.imagebam\\.com\\/image\\/([\\da-f]+)$", 'i');
 let uploaddirRegexp = new RegExp("https?:\\/\\/uploadir\\.com\\/u\\/(.+)$", 'i');
 let dokoMoeRegexp = new RegExp("https?:\\/\\/b\\.doko\\.moe\\/(.+)$", 'i');
-
+let userapiRegexp = new RegExp("https?:\\/\\/pp\\.userapi\\.com\\/(.+)$", 'i');
 
 let siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 
 
 let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)");
 
-let sources = [gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource, deviantartSource,
-    instagramSource, miniTokyoSource, redditSource, patreonSource, hegreSource, twitterSource];
+let sources = [gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource, deviantartSource, bloggerSource,
+    instagramSource, miniTokyoSource, redditSource, patreonSource, hegreSource, twitterSource, watch4beautySource];
 
 function isNullOrEmpty(input) {
     return input == null || input == "";
@@ -50,7 +50,8 @@ function evaluateLink(link, output, filename, select) {
             output.addLink(createLink({url: link, type: "page", filename: filename, select: select, thumbnail: thumbnail}));
         }
     } else if (mixtapeRegexp.test(link)||webmVideoRegexp.test(link)||armariumRegexp.test(link)||catboxRegexp.test(link)
-        ||safeMoeRegexp.test(link)||redditSource.imageRegexp.test(link)||uploaddirRegexp.test(link)||dokoMoeRegexp.test(link)) {
+        ||safeMoeRegexp.test(link)||redditSource.imageRegexp.test(link)||uploaddirRegexp.test(link)||dokoMoeRegexp.test(link)
+    ||userapiRegexp.test(link)) {
         output.addLink(createLink({url: link, type: "image", filename: filename, select: select}));
     }
 }
@@ -493,6 +494,9 @@ async function downloadMedia(pageMedia, downloadPath, checkboxes, savePath, prog
 
     for (let i = 0, len = checkboxes.length; i < len; i++) {
         let check = checkboxes[i];
+        let link = pageMedia.links[check.value];
+        link.select = check.checked;
+
         if(!check.checked) {
             continue;
         }
