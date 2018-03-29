@@ -2,7 +2,7 @@
 let patreonSource = {
     name: "deviantart",
 
-    postsRegExp: new RegExp("^https?://www\\.patreon\\.com/([^/^?]+)/posts/?$", 'i'),
+    postsRegExp: new RegExp("^https?://www\\.patreon\\.com/([^/^?]+)/posts/?.*$", 'i'),
     postRegExp: new RegExp("https?://www\\.patreon\\.com/posts/.*", 'i'),
     userRegExp: new RegExp("^https?://www\\.patreon\\.com/([^/^?]+)$", 'i'),
     fileRegExp: new RegExp("^https?:\\/\\/www\\.patreon\\.com\\/file\\?[^\\/]+$", 'i'),
@@ -25,7 +25,7 @@ let patreonSource = {
                 throw Error("Unable to find artist");
             }
 
-            let ele = document.querySelector("div[data-test-tag='post-card'] img");
+            let ele = document.querySelector("div[data-tag='post-card'] img");
             let download_url;
             if (ele != null) {
                 let link = ele.src; 

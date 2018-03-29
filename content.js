@@ -1,4 +1,3 @@
-let cachedLinks = [];
 let imgEles = [];
 
 
@@ -79,7 +78,12 @@ function downloadHelperPageInit() {
 
     if(!inIframe()) {
         let url = window.location.href;
-        deviantartSource.monitor(url);
+        for(let i = 0; i < sources.length; i++) {
+            let source = sources[i];
+            if(source.monitor!=undefined) {
+                source.monitor(url);
+            }
+        }
 
         inPageOutputElement = document.createElement("div");
         inPageOutputElement.id = "inPageDownloadHelper";
@@ -146,7 +150,7 @@ async function getPageMedia() {
             this.links.push(link);
         };
 
-        let metaAppName = document.querySelector('meta[property="al:android:app_name"]');
+
 
         let result;
         for (let i = 0; i < sources.length; i++) {
@@ -159,16 +163,12 @@ async function getPageMedia() {
         }
 
         if (!result) {
-            if (isTumblrSite(url, metaAppName)) {
-                await processTumblr(url, outputData);
-            } else if (isHentaiFoundrySite(url)) {
+            if (isHentaiFoundrySite(url)) {
                 processHentaiFoundry(url, outputData);
             } else if (isPostimgSite(url)) {
                 await processPostimg(url, outputData);
             } else if (isMetArtSite(url)) {
                 processMetArt(url, outputData);
-            } else if (isAlsScanSite(url)) {
-                processAlsScan(url, outputData);
             } else if (document.querySelector("#cpg_main_block_outer") != null) {
                 console.log("Coppermine site detected");
                 outputData.artist = siteRegexp.exec(url)[1];
@@ -423,7 +423,7 @@ function getFileName(link) {
 }
 
 function createLinkLegacy(url, type, filename, thumbnail, date, select) {
-    return createLink({url: url, type: type, filename: filename, thumbnail: thumbnail, date: date, select: select});
+    return createLink({url: url, type: type, filename: filename, thumbnail: thumbnail, date: date, select: select, autoDownload: true});
 }
 function createLink(args) {
     console.log("createLink", args)
@@ -433,6 +433,11 @@ function createLink(args) {
     let thumbnail = args.thumbnail;
     let date = args.date;
     let select = args.select;
+    let autoDownload = args.autoDownload;
+
+    if(autoDownload==null) {
+        autoDownload = true;
+    }
 
     if (imgurSource.postRegexp.test(url)) {
         // Mobile imgur links redirect, so we need to filter them a bit
@@ -447,6 +452,8 @@ function createLink(args) {
     outputData["url"] = resolvePartialUrl(decodeURI(url));
     outputData["type"] = type;
     outputData["date"] = date;
+
+    outputData["autoDownload"] = autoDownload;
 
     outputData["select"] = true;
     if(select!=null) {

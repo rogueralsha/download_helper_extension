@@ -20,17 +20,25 @@ let imagebamRegexp = new RegExp("https?:\\/\\/www\\.imagebam\\.com\\/image\\/([\
 let uploaddirRegexp = new RegExp("https?:\\/\\/uploadir\\.com\\/u\\/(.+)$", 'i');
 let dokoMoeRegexp = new RegExp("https?:\\/\\/b\\.doko\\.moe\\/(.+)$", 'i');
 let userapiRegexp = new RegExp("https?:\\/\\/pp\\.userapi\\.com\\/(.+)$", 'i');
+let uploadsRuRegexp = new RegExp("https?:\\/\\/[^\\.]+\\.uploads\\.ru\\/(.+)$", 'i');
+
+let megaRegexp = new RegExp("https?:\\/\\/mega\\.nz\\/(.+)$", 'i');
+let googleDriveRegexp = new RegExp("https?:\\/\\/drive\\.google\\.com\\/file\\/(.+)$", 'i');
+
+
 
 let siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 
 
+
 let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)");
 
-let sources = [gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource, deviantartSource, bloggerSource,
+let sources = [tinyTinyRssSource,imgbbSource, tumblrSource, gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource,
+    deviantartSource, bloggerSource, alsscanSource,
     instagramSource, miniTokyoSource, redditSource, patreonSource, hegreSource, twitterSource, watch4beautySource];
 
 function isNullOrEmpty(input) {
-    return input == null || input == "";
+    return input == null || input === "";
 }
 
 function sleep(ms) {
@@ -38,16 +46,16 @@ function sleep(ms) {
 }
 
 function evaluateLink(link, output, filename, select) {
-    let result = isSupportedPage(link)
+    let result = isSupportedPage(link);
     if (result.result) {
         let thumbnail = null;
         if(result.thumbnail!=null) {
             thumbnail = result.thumbnail;
         }
         if(result.directLink) {
-            output.addLink(createLink({url: link, type: "image", filename: filename, select: select, thumbnail: thumbnail}));
+            output.addLink(createLink({url: link, type: "image", filename: filename, select: select, thumbnail: thumbnail, autoDownload: result.autoDownload}));
         } else {
-            output.addLink(createLink({url: link, type: "page", filename: filename, select: select, thumbnail: thumbnail}));
+            output.addLink(createLink({url: link, type: "page", filename: filename, select: select, thumbnail: thumbnail, autoDownload: result.autoDownload}));
         }
     } else if (mixtapeRegexp.test(link)||webmVideoRegexp.test(link)||armariumRegexp.test(link)||catboxRegexp.test(link)
         ||safeMoeRegexp.test(link)||redditSource.imageRegexp.test(link)||uploaddirRegexp.test(link)||dokoMoeRegexp.test(link)
@@ -61,10 +69,11 @@ function isSupportedPage(link) {
     output.result = false;
     output.thumbnail = null;
     output.directLink = false;
+    output.autoDownload = true;
 
     for (let i = 0; i < sources.length; i++) {
         let source = sources[i];
-        if(source.isSupported!=undefined&&source.isSupported(link)) {
+        if(source.isSupported!==undefined&&source.isSupported(link)) {
             output.result = true;
             if(source.getThumbnail!==undefined) {
                 output.thumbnail = source.getThumbnail(link);
@@ -78,17 +87,25 @@ function isSupportedPage(link) {
 
     if(output.result == false) {
         if (hfRegExp.test(link) ||
-            tumblrRegExp.test(link) ||
             flickrRegexp.test(link) ||
             eroshareRegexp.test(link) ||
             postimgPostRegexp.test(link) ||
             postimgAlbumRegexp.test(link) ||
             pimpandhostRegexp.test(link) ||
+            uploadsRuRegexp.test(link)||
             imagebamRegexp.test(link)) {
             output.result = true;
         }
     }
-    return output;
+    if(output.result == false) {
+        if (megaRegexp.test(link)||
+            googleDriveRegexp.test(link)) {
+            output.result = true;
+            output.autoDownload = false;
+        }
+    }
+
+            return output;
 }
 
 function getPageContentsFromIframe(iframeUrl) {
@@ -102,7 +119,7 @@ function getPageContentsFromIframe(iframeUrl) {
 
             if (response.error != null) {
                 console.log(response.error);
-            } else if (response.links.length == 0) {
+            } else if (response.links.length === 0) {
                 console.log("No media found in iframe");
             } else {
                 resolve(response.links);
@@ -152,54 +169,64 @@ function closeTab(tabId) {
     });
 }
 
+function createTableCell(contents, width) {
+    let output = document.createElement("td");
+    output.appendChild(contents);
+    if(width==null) {
+        output.style.width = "auto";
+    }
+    return output;
+}
+
+function createTableRow() {
+    return document.createElement("tr");
+}
+
+function addToTableRow(row, contents) {
+    row.appendChild(createTableCell(contents));
+}
+
+let  minimized = false;
+
 async function buildOutputScreen(rootElement, data, refreshCallback) {
-    let closeWindowButton = document.createElement("button");
-    applyButtonStyle(closeWindowButton);
-    closeWindowButton.innerHTML = "Min";
-    closeWindowButton.title = "Minimize";
-    closeWindowButton.style.position = "absolute";
-    closeWindowButton.style.top = "0";
-    closeWindowButton.style.right= "0";
-
-    closeWindowButton.onclick = function() {
-        "use strict";
-        if(rootElement.style.width==="64pt") {
-            rootElement.style.width = "auto";
-            rootElement.style.height = "auto";
-
-        } else {
-            rootElement.style.width = "64pt";
-            rootElement.style.height = "64pt";
-        }
-    };
-    rootElement.appendChild(closeWindowButton);
-
-    let closeButton = document.createElement("button");
-    applyButtonStyle(closeButton);
-    closeButton.innerText = "✘";
-    closeButton.title = "Close";
-    closeButton.style.position = "absolute";
-    closeButton.style.top = "0";
-    closeButton.style.right= "35pt";
-    closeButton.onclick = async function () {
-        closeTab();
-    };
-    rootElement.appendChild(closeButton);
+    console.log("Building output screen");
 
     rootElement.style.whiteSpace = "nowrap";
     rootElement.style.fontSize = "12pt";
     rootElement.style.color = "black";
-    let artistDiv = document.createElement("div");
-    rootElement.appendChild(artistDiv);
-    let artistText = document.createElement("span");
 
-    if (data == null) {
-        inPageOutputElement.innerHTML = "No media found (null)";
-        return;
-    } else if (data.error != null) {
-        inPageOutputElement.innerHTML = data.error;
-        return;
+    let buttonTable = document.createElement("table");
+    buttonTable.style.width="100%";
+    let detailElement = document.createElement("details");
+
+    let restoreButton = document.createElement("button");
+    applyButtonStyle(restoreButton);
+    restoreButton.innerHTML = "Rest";
+    restoreButton.title = "Restore";
+    restoreButton.onclick = function() {
+        "use strict";
+        minimized = false;
+        rootElement.style.width = "auto";
+        rootElement.style.height = "auto";
+        detailElement.style.display = "block";
+        buttonTable.style.display = "block";
+        restoreButton.style.display = "none";
+    };
+    rootElement.appendChild(restoreButton);
+
+    if(minimized) {
+        detailElement.style.display = "none";
+        buttonTable.style.display = "none";
+        restoreButton.style.display = "block";
+    } else {
+        detailElement.style.display = "block";
+        buttonTable.style.display = "block";
+        restoreButton.style.display = "none";
     }
+
+    rootElement.appendChild(buttonTable);
+
+    let tableRow = document.createElement("tr");
 
     let refreshButton = document.createElement("button");
     applyButtonStyle(refreshButton);
@@ -209,73 +236,70 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         "use strict";
         refreshCallback();
     };
-    artistDiv.appendChild(refreshButton);
-    artistDiv.appendChild(artistText);
+    addToTableRow(tableRow, refreshButton);
 
+    let artistText = document.createElement("span");
+    addToTableRow(tableRow, artistText);
 
-    if (data.links.length === 0) {
-        artistText.innerHTML += "No media found";
-        return;
-    }
-
-
-    artistText.innerHTML += "Artist: ";
-
-    let progressDiv = document.createElement("div");
-    rootElement.appendChild(progressDiv);
-
-    if (data.page_title != null) {
-        artistText.innerHTML += data.page_title + " (" + data.artist + ") (" + data.links.length + ")";
-    } else {
-        artistText.innerHTML += data.artist + " (" + data.links.length + ")";
-    }
-
-    let buttonBarDiv = document.createElement("div");
-    buttonBarDiv.style.userSelect = "none";
-    buttonBarDiv.style.textAlign = "right";
-    rootElement.appendChild(buttonBarDiv);
-
-    if (data.links.length === 0) {
-        return;
-    }
-
-    let pathDiv = document.createElement("div");
-    rootElement.appendChild(pathDiv);
-
-    let autoButton = document.createElement("button");
-    applyButtonStyle(autoButton);
-    autoButton.innerText = "✈";
-    autoButton.title = "Auto-Generate path";
-    autoButton.onclick = function () {
-        pathInput.value = "import/artist;/" + data.artist;
+    let closeButton = document.createElement("button");
+    applyButtonStyle(closeButton);
+    closeButton.innerText = "×";
+    closeButton.title = "Close Window";
+    closeButton.onclick = async function () {
+        rootElement.style.display = "none";
     };
-    pathDiv.appendChild(autoButton);
-
-    let pathInput = document.createElement("input");
-    pathInput.type = "text";
-    pathDiv.appendChild(pathInput);
-    pathInput.value = await getMapping(data.artist);
+    let tableCell = createTableCell(closeButton);
+    tableCell.style.textAlign = "right";
+    tableRow.appendChild(tableCell);
 
 
-    let lbl = document.createElement("label");
-    lbl.innerText = "Save";
-    lbl.style.userSelect = "none";
-    let savePathCheck = document.createElement("input");
-    savePathCheck.type = "checkbox";
-    savePathCheck.checked = data.saveByDefault;
-    lbl.appendChild(savePathCheck);
-    pathDiv.appendChild(lbl);
+    let closeTabButton = document.createElement("button");
+    applyButtonStyle(closeTabButton);
+    closeTabButton.innerText = "✖";
+    closeTabButton.title = "Close Tab";
+    closeTabButton.onclick = async function () {
+        closeTab();
+    };
+    tableCell = createTableCell(closeTabButton);
+    tableCell.style.textAlign = "right";
+    tableRow.appendChild(tableCell);
 
-    let checkboxes = [];
+
+    let minimizeButton = document.createElement("button");
+    applyButtonStyle(minimizeButton);
+    minimizeButton.innerHTML = "Min";
+    minimizeButton.title = "Minimize";
+
+    minimizeButton.onclick = function() {
+        "use strict";
+        minimized = true;
+        buttonTable.style.display = "none";
+        detailElement.style.display = "none";
+        rootElement.style.width = "32pt";
+        rootElement.style.height = "32pt";
+        restoreButton.style.display = "block";
+    };
+
+    tableCell = createTableCell(minimizeButton);
+    tableCell.style.textAlign = "right";
+    tableRow.appendChild(tableCell);
+
+    buttonTable.appendChild((tableRow));
+
+    if (data == null) {
+        artistText.innerHTML = "No media found (null)";
+        return;
+    } else if (data.error != null) {
+        artistText.innerHTML = "Error: " + data.error;
+        return;
+    } else if (data.links.length === 0) {
+        artistText.innerHTML = "No media found";
+        return;
+    }
+    artistText.innerHTML = "Artist: ";
 
 
-
-    let delayLabel = document.createElement("label");
-    delayLabel.innerText = "Delay";
-    let delayCheck = document.createElement("input");
-    delayCheck.type = "checkbox";
-    delayCheck.checked = true;
-    delayLabel.appendChild(delayCheck);
+    tableRow = document.createElement("tr");
 
     let openButton = document.createElement("button");
     applyButtonStyle(openButton);
@@ -302,9 +326,16 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         await openHelper(openList, progressStatus,delayCheck.checked);
         processing = false;
     };
-    buttonBarDiv.appendChild(openButton);
+    addToTableRow(tableRow, openButton);
 
-    buttonBarDiv.appendChild(delayLabel);
+    let delayLabel = document.createElement("label");
+    delayLabel.innerText = "Delay";
+    let delayCheck = document.createElement("input");
+    delayCheck.type = "checkbox";
+    delayCheck.checked = false;
+    delayLabel.appendChild(delayCheck);
+
+    addToTableRow(tableRow, delayLabel);
 
 
     let downloadButton = document.createElement("button");
@@ -316,7 +347,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         await downloadMedia(data,pathInput.value, checkboxes, savePathCheck.checked, progressDiv);
         processing = false;
     };
-    buttonBarDiv.appendChild(downloadButton);
+    addToTableRow(tableRow, downloadButton);
 
     let downloadCloseButton = document.createElement("button");
     applyButtonStyle(downloadCloseButton);
@@ -329,12 +360,59 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         }
         processing = false;
     };
-    buttonBarDiv.appendChild(downloadCloseButton);
+    addToTableRow(tableRow, downloadCloseButton);
+
+    buttonTable.appendChild((tableRow));
+
+
+    tableRow = document.createElement("tr");
+    let autoButton = document.createElement("button");
+    applyButtonStyle(autoButton);
+    autoButton.innerText = "✈";
+    autoButton.title = "Auto-Generate path";
+    autoButton.onclick = function () {
+        pathInput.value = "import/artist;/" + data.artist;
+    };
+    addToTableRow(tableRow, autoButton);
+
+
+    let pathInput = document.createElement("input");
+    pathInput.type = "text";
+    pathInput.value = await getMapping(data.artist);
+    addToTableRow(tableRow, pathInput);
+
+    let lbl = document.createElement("label");
+    lbl.innerText = "Save";
+    lbl.style.userSelect = "none";
+    let savePathCheck = document.createElement("input");
+    savePathCheck.type = "checkbox";
+    savePathCheck.checked = data.saveByDefault;
+    lbl.appendChild(savePathCheck);
+    addToTableRow(tableRow, lbl);
+
+    buttonTable.appendChild((tableRow));
 
 
 
 
-    let detailElement = document.createElement("details");
+
+    let progressDiv = document.createElement("div");
+    rootElement.appendChild(progressDiv);
+
+    if (data.page_title != null) {
+        artistText.innerHTML += data.page_title + " (" + data.artist + ") (" + data.links.length + ")";
+    } else {
+        artistText.innerHTML += data.artist + " (" + data.links.length + ")";
+    }
+
+    if (data.links.length === 0) {
+        return;
+    }
+
+
+    let checkboxes = [];
+
+
     detailElement.maxHeight = (window.innerHeight - 200) + "px";
     let summaryElement = document.createElement("summary");
     summaryElement.innerText = data.links.length + " links found";
@@ -360,6 +438,8 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         let link = data.links[i];
         createLinkRow(tableElement, link, i, checkboxes);
     }
+
+
 
 
 
@@ -399,7 +479,7 @@ function createLinkRow(table, link, i, checkboxes) {
     let btn = document.createElement("input");
     applyButtonStyle(btn);
     btn.type = "button";
-    btn.value = "✘";
+    btn.value = "☛";
     btn.dataset["index"] = i;
     btn.title = "Select only this item";
     btn.onclick = function () {
@@ -414,7 +494,7 @@ function createLinkRow(table, link, i, checkboxes) {
     btn = document.createElement("input");
     applyButtonStyle(btn);
     btn.type = "button";
-    btn.value = "^";
+    btn.value = "↑";
     btn.title = "Select this and all items above";
     btn.dataset["index"] = i;
     btn.onclick = function () {

@@ -51,6 +51,14 @@ function downloadHelper(downloadPath, linkList, progress) {
 
             if (link["type"] === "page") {
                 let tab = await openNewBackgroundTab(link["url"]);
+                if(link["autoDownload"]===false) {
+                    await downloadHelper(downloadPath, linkList, progress);
+                    if (progress != null)
+                        progress.sendUpdate();
+                    resolve();
+                    return;
+                }
+
                 tab = await getTab(tab.id);
                 console.log("Sending getPageMedia message to tab: " + tab.url);
                 chrome.runtime.sendMessage({tabId: tab.id, url: tab.url, command: "getPageMedia"}, async function (response) {

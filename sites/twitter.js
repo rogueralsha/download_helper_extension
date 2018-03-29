@@ -19,17 +19,17 @@ let twitterSource = {
 
             if (this.postRegexp.test(url)) {
                 // This means we're viewing an individual post
-                let elements = document.querySelectorAll(".permalink-container .js-adaptive-photo img");
+                let elements = document.querySelectorAll(".permalink-tweet-container .js-adaptive-photo img");
                 for (let i = 0; i < elements.length; i++) {
                     let ele = elements[i];
                     let link = ele.src;
                     console.log("Found URL: " + link);
                     outputData.addLink(createLink({url:link + ":large",
                                                    type: "image",
-                                                    filename: getFileName(link)}
-                                                ));
+                                                    filename: getFileName(link)
+                    }));
                 }
-                elements = document.querySelectorAll(".permalink-container .AdaptiveMedia video");
+                elements = document.querySelectorAll(".permalink-tweet-container .AdaptiveMedia video");
                 for (let i = 0; i < elements.length; i++) {
                     let ele = elements[i];
                     let link = ele.src;

@@ -5,38 +5,38 @@ let imgurSource = {
     videoRegexp: new RegExp("https?:\\/\\/([mi]\\.)?imgur\\.com\\/([^\\/]+)\.gifv$", 'i'),
     directRegexp: new RegExp("https?:\\/\\/([mi]\\.)?imgur\\.com\\/([^\\/]+)\\.[a-z]{3,4}$", 'i'),
 
-    isSupported: function(link) {
+    isSupported: function (link) {
         return imgurSource.videoRegexp.test(link) ||
             imgurSource.albumRegexp.test(link) ||
             imgurSource.postRegexp.test(link);
     },
 
-    isDirectFileLink: function(link) {
-        return (!this.videoRegexp.test(link))&& imgurSource.directRegexp.test(link);
+    isDirectFileLink: function (link) {
+        return (!this.videoRegexp.test(link)) && imgurSource.directRegexp.test(link);
     },
 
     process: function (url, outputData) {
         let source = this;
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             let result = false;
 
-        if (source.videoRegexp.test(url)) {
-            result = true;
-            console.log("Imgur video page detected");
-            outputData.saveByDefault = false;
+            if (source.videoRegexp.test(url)) {
+                result = true;
+                console.log("Imgur video page detected");
+                outputData.saveByDefault = false;
 
-            outputData.artist = "imgur";
-            console.log("Artist: " + outputData.artist);
+                outputData.artist = "imgur";
+                console.log("Artist: " + outputData.artist);
 
 
-            let videoEle = document.querySelector("video source");
+                let videoEle = document.querySelector("video source");
 
-            if (videoEle != null) {
-                let link = videoEle.src;
-                console.log("Found URL: " + link);
-                outputData.addLink(createLinkLegacy(link, "video"));
-            }
-        } else if(source.directRegexp.test(url)) {
+                if (videoEle != null) {
+                    let link = videoEle.src;
+                    console.log("Found URL: " + link);
+                    outputData.addLink(createLinkLegacy(link, "video"));
+                }
+            } else if (source.directRegexp.test(url)) {
                 result = true;
                 console.log("imgur direct link detected");
                 outputData.saveByDefault = false;

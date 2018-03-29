@@ -61,6 +61,7 @@ async function processBackgroundMessage(request, sender, sendResponse) {
             });
         });
     } else if(request.command==="getPageMedia") {
+        console.log("Background request to getPageMedia");
         if(request.tabId!=null ){
             chrome.tabs.sendMessage(request.tabId, {url: request.url, command: "getPageMedia"}, async function (response) {
                 console.log("Sending response back to tab");

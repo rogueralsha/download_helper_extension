@@ -5,6 +5,14 @@ let deviantartSource = {
     regExp: new RegExp("https?://([^\\.]+)\\.deviantart\\.com/art/.*", 'i'),
     sandboxRegExp: new RegExp("https?://sandbox\\.deviantart\\.com.*", 'i'),
 
+    cachedLinks: [],
+
+    addLinkToCache: function(link) {
+        if (!this.cachedLinks.includes(link)) {
+            console.log("Found URL: " + link);
+            this.cachedLinks.push(link);
+        }
+    },
 
     isSupported: function(url) {
         return this.regExp.test(url);
@@ -18,10 +26,11 @@ let deviantartSource = {
         let eles = document.querySelectorAll(this.galleryItemSelector);
 
         for (let i = 0; i < eles.length; i++) {
-            console.log("Found URL: " + eles[i].href);
-            cachedLinks.push(eles[i].href);
+            this.addLinkToCache(eles[i].href);
         }
 
+
+        let source = this;
 
 
         let observer = new MutationObserver(function (mutations) {
@@ -34,10 +43,7 @@ let deviantartSource = {
                     eles = document.querySelectorAll(deviantartSource.galleryItemSelector);
                     for (let k = 0; k < eles.length; k++) {
                         let link = eles[k].href;
-                        if (!cachedLinks.includes(link)) {
-                            console.log("Found URL: " + link);
-                            cachedLinks.push(link);
-                        }
+                        source.addLinkToCache(link);
                     }
                 }
             });
@@ -47,6 +53,7 @@ let deviantartSource = {
     },
     process: async function (url, output) {
         let result =   false;
+        let source = this;
         if (this.regExp.test(url)) {
             result = true;
             console.log("Deviantart page detected");
@@ -91,18 +98,15 @@ let deviantartSource = {
 
             for (let i = 0; i < eles.length; i++) {
                 let link = eles[i].href;
-                if (!cachedLinks.includes(link)) {
-                    console.log("Found URL: " + eles[i].href);
-                    cachedLinks.push(eles[i].href);
-                }
+                source.addLinkToCache(link);
             }
 
 
-            if (cachedLinks == null || cachedLinks.length == 0) {
+            if (source.cachedLinks == null || source.cachedLinks.length === 0) {
                 output.error = "No media found";
             }
-            for (i = 0; i < cachedLinks.length; i++) {
-                link = cachedLinks[i];
+            for (i = 0; i < source.cachedLinks.length; i++) {
+                let link = source.cachedLinks[i];
 
                 console.log("Found URL: " + link);
                 output.addLink(createLinkLegacy(link, "page"));
