@@ -23,6 +23,8 @@
         "sites/alsscan.js",
         "sites/artstation.js",
         "sites/blogger.js",
+        "sites/comicartcommunity.js",
+        "sites/comicartfans.js",
         "sites/deviantart.js",
         "sites/ehentai.js",
         "sites/erome.js",

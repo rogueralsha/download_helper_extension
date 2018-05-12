@@ -117,7 +117,7 @@ async function restore_options() {
     }
     space.appendChild(table);
 }
-document.addEventListener('DOMContentLoaded', restore_options);
+//document.addEventListener('DOMContentLoaded', restore_options);
 document.getElementById('save').addEventListener('click',
     save_options);
 document.getElementById('export-button').addEventListener('click',

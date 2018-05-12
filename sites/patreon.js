@@ -25,14 +25,14 @@ let patreonSource = {
                 throw Error("Unable to find artist");
             }
 
-            let ele = document.querySelector("div[data-tag='post-card'] img");
+            eles = document.querySelectorAll("div[data-tag='post-card'] img");
             let download_url;
-            if (ele != null) {
-                let link = ele.src; 
+            for (let i = 0; i < eles.length; i++) {
+                let ele = eles[i];
+                let link = ele.src;
                 console.log("Found URL: " + link);
                 output.addLink(createLinkLegacy(link, "image"));
             }
-
 
             // Get post attachments
             let elements = document.querySelectorAll("a");

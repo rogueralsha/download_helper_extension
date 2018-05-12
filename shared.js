@@ -33,9 +33,10 @@ let siteRegexp = new RegExp("https?://([^/]+)/.*", 'i');
 
 let backgroundImageRegexp = new RegExp("url\\([\\'\\\"](.+)[\\'\\\"]\\)");
 
-let sources = [tinyTinyRssSource,imgbbSource, tumblrSource, gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource,
-    deviantartSource, bloggerSource, alsscanSource,
-    instagramSource, miniTokyoSource, redditSource, patreonSource, hegreSource, twitterSource, watch4beautySource];
+let sources = [tinyTinyRssSource,imgbbSource, gfycatSource, webmshareSource, youtubeSource, imgurSource, eromeSource, artstationSource,
+    deviantartSource, bloggerSource, alsscanSource, comicartfansSource, comicArtCommunitySource,
+    instagramSource, miniTokyoSource, redditSource, patreonSource, hegreSource, twitterSource, watch4beautySource,
+    tumblrSource];
 
 function isNullOrEmpty(input) {
     return input == null || input === "";
@@ -169,12 +170,10 @@ function closeTab(tabId) {
     });
 }
 
-function createTableCell(contents, width) {
+function createTableCell(contents) {
     let output = document.createElement("td");
     output.appendChild(contents);
-    if(width==null) {
-        output.style.width = "auto";
-    }
+    output.style.width = "auto";
     return output;
 }
 
@@ -183,8 +182,11 @@ function createTableRow() {
 }
 
 function addToTableRow(row, contents) {
-    row.appendChild(createTableCell(contents));
+    let output = createTableCell(contents);
+    row.appendChild(output);
+    return output;
 }
+
 
 let  minimized = false;
 
@@ -195,8 +197,8 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     rootElement.style.fontSize = "12pt";
     rootElement.style.color = "black";
 
-    let buttonTable = document.createElement("table");
-    buttonTable.style.width="100%";
+    let windowButtonsTable = document.createElement("table");
+    windowButtonsTable.style.width="100%";
     let detailElement = document.createElement("details");
 
     let restoreButton = document.createElement("button");
@@ -209,22 +211,22 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         rootElement.style.width = "auto";
         rootElement.style.height = "auto";
         detailElement.style.display = "block";
-        buttonTable.style.display = "block";
+        windowButtonsTable.style.display = "block";
         restoreButton.style.display = "none";
     };
     rootElement.appendChild(restoreButton);
 
     if(minimized) {
         detailElement.style.display = "none";
-        buttonTable.style.display = "none";
+        windowButtonsTable.style.display = "none";
         restoreButton.style.display = "block";
     } else {
         detailElement.style.display = "block";
-        buttonTable.style.display = "block";
+        windowButtonsTable.style.display = "block";
         restoreButton.style.display = "none";
     }
 
-    rootElement.appendChild(buttonTable);
+    rootElement.appendChild(windowButtonsTable);
 
     let tableRow = document.createElement("tr");
 
@@ -236,10 +238,10 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         "use strict";
         refreshCallback();
     };
-    addToTableRow(tableRow, refreshButton);
+    addToTableRow(tableRow, refreshButton).style.width = "40px";
 
     let artistText = document.createElement("span");
-    addToTableRow(tableRow, artistText);
+    addToTableRow(tableRow, artistText).style.width = "99%";
 
     let closeButton = document.createElement("button");
     applyButtonStyle(closeButton);
@@ -250,6 +252,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     };
     let tableCell = createTableCell(closeButton);
     tableCell.style.textAlign = "right";
+    tableCell.style.width="40px";
     tableRow.appendChild(tableCell);
 
 
@@ -262,6 +265,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     };
     tableCell = createTableCell(closeTabButton);
     tableCell.style.textAlign = "right";
+    tableCell.style.width="40px";
     tableRow.appendChild(tableCell);
 
 
@@ -273,7 +277,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     minimizeButton.onclick = function() {
         "use strict";
         minimized = true;
-        buttonTable.style.display = "none";
+        windowButtonsTable.style.display = "none";
         detailElement.style.display = "none";
         rootElement.style.width = "32pt";
         rootElement.style.height = "32pt";
@@ -282,9 +286,14 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
 
     tableCell = createTableCell(minimizeButton);
     tableCell.style.textAlign = "right";
+    tableCell.style.width="40px";
     tableRow.appendChild(tableCell);
 
-    buttonTable.appendChild((tableRow));
+    windowButtonsTable.appendChild(tableRow);
+
+    let actionButtonsTable = document.createElement("table");
+    actionButtonsTable.style.width="100%";
+
 
     if (data == null) {
         artistText.innerHTML = "No media found (null)";
@@ -326,7 +335,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         await openHelper(openList, progressStatus,delayCheck.checked);
         processing = false;
     };
-    addToTableRow(tableRow, openButton);
+    addToTableRow(tableRow, openButton).style.width="40px";
 
     let delayLabel = document.createElement("label");
     delayLabel.innerText = "Delay";
@@ -335,7 +344,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     delayCheck.checked = false;
     delayLabel.appendChild(delayCheck);
 
-    addToTableRow(tableRow, delayLabel);
+    addToTableRow(tableRow, delayLabel).style.width="99%";
 
 
     let downloadButton = document.createElement("button");
@@ -347,12 +356,13 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         await downloadMedia(data,pathInput.value, checkboxes, savePathCheck.checked, progressDiv);
         processing = false;
     };
-    addToTableRow(tableRow, downloadButton);
+    addToTableRow(tableRow, downloadButton).style.width="40px";
 
     let downloadCloseButton = document.createElement("button");
     applyButtonStyle(downloadCloseButton);
     downloadCloseButton.innerText = "↓ & ✘";
     downloadCloseButton.title = "Download & Close";
+    downloadButton.style.whiteSpace="nowrap";
     downloadCloseButton.onclick = async function () {
         processing = true;
         if(await downloadMedia(data,pathInput.value, checkboxes, savePathCheck.checked, progressDiv)) {
@@ -360,10 +370,14 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
         }
         processing = false;
     };
-    addToTableRow(tableRow, downloadCloseButton);
+    tableCell = addToTableRow(tableRow, downloadCloseButton);
+    tableCell.style.width="45px";
+    tableCell.style.whiteSpace="nowrap";
 
-    buttonTable.appendChild((tableRow));
+    actionButtonsTable.appendChild((tableRow));
 
+    let savePathTable = document.createElement("table");
+    savePathTable.style.width="100%";
 
     tableRow = document.createElement("tr");
     let autoButton = document.createElement("button");
@@ -373,13 +387,13 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     autoButton.onclick = function () {
         pathInput.value = "import/artist;/" + data.artist;
     };
-    addToTableRow(tableRow, autoButton);
+    addToTableRow(tableRow, autoButton).style.width="40px";
 
 
     let pathInput = document.createElement("input");
     pathInput.type = "text";
     pathInput.value = await getMapping(data.artist);
-    addToTableRow(tableRow, pathInput);
+    addToTableRow(tableRow, pathInput).style.width="180px";;
 
     let lbl = document.createElement("label");
     lbl.innerText = "Save";
@@ -388,11 +402,13 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
     savePathCheck.type = "checkbox";
     savePathCheck.checked = data.saveByDefault;
     lbl.appendChild(savePathCheck);
-    addToTableRow(tableRow, lbl);
+    addToTableRow(tableRow, lbl).style.width="99%";;
 
-    buttonTable.appendChild((tableRow));
+    savePathTable.appendChild((tableRow));
 
 
+    rootElement.appendChild(actionButtonsTable);
+    rootElement.appendChild(savePathTable);
 
 
 
@@ -430,6 +446,7 @@ async function buildOutputScreen(rootElement, data, refreshCallback) {
 
     let tableElement = document.createElement("table");
     tableElement.style.tableLayout = "fixed";
+    tableElement.style.width="100%";
 
     pElement.appendChild(tableElement);
     pElement.style.overflowY = "auto";
@@ -474,7 +491,8 @@ function createLinkRow(table, link, i, checkboxes) {
 
 
 
-    let cell = tdWrap(check);
+    let cell = createTableCell(check);
+    cell.style.width = "130px";
 
     let btn = document.createElement("input");
     applyButtonStyle(btn);
@@ -522,6 +540,7 @@ function createLinkRow(table, link, i, checkboxes) {
 
     row.appendChild(cell);
 
+    let imageFound = false;
     if (link["thumbnail"] != undefined) {
         let img = document.createElement("img");
         img.dataset["index"] = i;
@@ -533,19 +552,21 @@ function createLinkRow(table, link, i, checkboxes) {
             checkboxes[index].checked = !checkboxes[index].checked;
         };
 
-        row.appendChild(tdWrap(img));
-    } else {
-        row.appendChild(document.createElement("td"));
+        addToTableRow(row,img).style.width = "50px";
+        imageFound = true;
     }
 
 
     let textLink = linkWrap(link["filename"], link["url"]);
     textLink.classList.add("downloadHelperLink");
-    let textCell = tdWrap(textLink);
-    textCell.style.width = "120px";
+    let textCell = createTableCell(textLink);
+    textCell.style.width = "99%";
     textCell.style.overflow = "hidden";
     textCell.style.textOverflow = "ellipsis";
     textCell.title = link["filename"];
+    if(!imageFound) {
+        textCell.colSpan = 2;
+    }
 
     row.appendChild(textCell);
 
@@ -661,11 +682,6 @@ async function openHelper(openList, progress, delay) {
 
 }
 
-function tdWrap(element) {
-    let output = document.createElement("td");
-    output.appendChild(element);
-    return output;
-}
 function linkWrap(element, link) {
     let output = document.createElement("a");
     if(typeof element === 'string' ) {

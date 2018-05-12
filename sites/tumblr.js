@@ -86,6 +86,7 @@ let tumblrSource = {
         return new Promise(async function (resolve, reject) {
             if (!source.isTumblrSite(url)) {
                 resolve(result);
+                return;
             }
 
             console.log("Tumblr page detected");
@@ -150,10 +151,13 @@ let tumblrSource = {
                     "div#post",
                     "div#postcontent",
                     "li.post",
+                    "ul.post",
                     "div.posts",
                     "div.grid_7",
                     "div.photoset",
                     "div#entry",
+                    "div.entry",
+                    "div#root",
                     "div#Body"
                 ];
                 for (let i = 0; i < selectors.length; i++) {
